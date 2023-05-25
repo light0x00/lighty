@@ -1,0 +1,10 @@
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IntelliJ IDEA ###
+.idea
+*.iml
+
+### Mac OS ###
+.DS_Store
