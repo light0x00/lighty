@@ -1,7 +1,7 @@
-package io.github.light0x00.letty.core;
+package io.github.light0x00.letty.expr;
 
 
-import io.github.light0x00.letty.core.buffer.BufferPool;
+import io.github.light0x00.letty.expr.buffer.BufferPool;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
