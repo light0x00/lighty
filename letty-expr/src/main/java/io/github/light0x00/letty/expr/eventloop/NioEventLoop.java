@@ -1,6 +1,6 @@
 package io.github.light0x00.letty.expr.eventloop;
 
-import io.github.light0x00.letty.expr.ChannelHandler;
+import io.github.light0x00.letty.expr.EventHandler;
 import io.github.light0x00.letty.expr.ListenableFutureTask;
 import lombok.SneakyThrows;
 
@@ -111,7 +111,7 @@ public class NioEventLoop implements EventExecutor {
             while (it.hasNext()) {
                 SelectionKey event = it.next();
                 //参考 netty NioEventLoop#processSelectedKeysPlain 682
-                var channelHandler = (ChannelHandler) event.attachment();
+                var channelHandler = (EventHandler) event.attachment();
                 channelHandler.onEvent(event);
                 it.remove();
             }

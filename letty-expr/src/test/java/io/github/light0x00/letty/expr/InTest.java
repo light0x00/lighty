@@ -81,12 +81,12 @@ public class InTest {
         }
 
         @Override
-        public List<ChannelInboundPipeline> inboundPipelines() {
+        public List<ChannelInboundHandler> inboundPipelines() {
             return null;
         }
 
         @Override
-        public List<ChannelOutboundPipeline> outboundPipelines() {
+        public List<ChannelOutboundHandler> outboundPipelines() {
             return null;
         }
 
@@ -106,12 +106,12 @@ public class InTest {
         }
 
         @Override
-        public List<ChannelInboundPipeline> inboundPipelines() {
+        public List<ChannelInboundHandler> inboundPipelines() {
             return null;
         }
 
         @Override
-        public List<ChannelOutboundPipeline> outboundPipelines() {
+        public List<ChannelOutboundHandler> outboundPipelines() {
             return null;
         }
 

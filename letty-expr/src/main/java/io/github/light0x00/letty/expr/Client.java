@@ -38,7 +38,7 @@ public class Client {
                         SelectionKey key = f.get();
                         // attach context before connect , so that to ensure the context not null when the event triggered.
                         // connect 动作应发生在 attach context 之后, 这样才能保证事件触发时能拿到非空的 context
-                        key.attach(new ChannelIOHandler(channel, key, messageHandler));
+                        key.attach(new IOEventHandler(channel, key, messageHandler));
 
                         channel.connect(address);
 

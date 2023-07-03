@@ -16,13 +16,15 @@ import java.nio.channels.WritableByteChannel;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 /**
  * @author light0x00
  * @since 2023/6/29
  */
 @Slf4j
-public class ChannelIOHandler implements ChannelHandler {
+public class IOEventHandler implements EventHandler {
 
     BufferPool<ByteBuffer> bufferPool;
 
@@ -33,10 +35,6 @@ public class ChannelIOHandler implements ChannelHandler {
     SelectionKey key;
 
     ChannelContext context;
-
-    Invocation inboundInvocation;
-
-    OutboundInvocation outboundInvocation;
 
     MessageHandler messageHandler;
 
@@ -52,6 +50,7 @@ public class ChannelIOHandler implements ChannelHandler {
      */
     volatile boolean outboundFIN;
 
+
     /**
      * 两端均关闭时,即两阶段回收完成时触发
      */
@@ -59,12 +58,25 @@ public class ChannelIOHandler implements ChannelHandler {
 
     /**
      * NIO 线程 {@link #processReadableEvent()} 更新 closedByPeer \ closed
+     * <p>
+     * close 执行清除
      * 用户线程 {@link #write(Object, ListenableFutureTask)} 执行添加
      * NIO 线程 {@link #processWritableEvent()} 执行移除
      */
     final Queue<BufferFuturePair> buffersToWrite = new ConcurrentLinkedDeque<>();
 
-    public ChannelIOHandler(SocketChannel channel, SelectionKey key, ChannelHandlerConfigurer configurer) {
+
+    Invocation inboundInvocation;
+
+    OutboundInvocation outboundInvocation;
+
+    Runnable connectedNotifier;
+
+    Runnable readCompletedNotifier;
+
+    Runnable closedNotifier;
+
+    public IOEventHandler(SocketChannel channel, SelectionKey key, ChannelHandlerConfigurer configurer) {
         this.channel = channel;
         this.key = key;
 
@@ -80,7 +92,6 @@ public class ChannelIOHandler implements ChannelHandler {
             @NotNull
             @Override
             public ListenableFutureTask<Void> close() {
-
                 return closeFuture;
             }
 
@@ -92,15 +103,42 @@ public class ChannelIOHandler implements ChannelHandler {
             }
         };
 
-        List<ChannelInboundPipeline> inboundPipelines = configurer.inboundPipelines();
-        List<ChannelOutboundPipeline> outboundPipelines = configurer.outboundPipelines();
+        List<ChannelInboundHandler> inboundPipelines = configurer.inboundPipelines();
+        List<ChannelOutboundHandler> outboundPipelines = configurer.outboundPipelines();
         messageHandler = configurer.messageHandler();
 
-        inboundInvocation = ChannelInboundPipeline.buildInvocationChain(
+        inboundInvocation = ChannelInboundHandler.buildInvocationChain(
                 context, inboundPipelines, (msg) -> messageHandler.onMessage(context, msg));
 
-        outboundInvocation = ChannelOutboundPipeline.buildInvocationChain(
+        outboundInvocation = ChannelOutboundHandler.buildInvocationChain(
                 context, outboundPipelines, this::write);
+
+
+        List<ChannelObserver> observers = Stream.concat(inboundPipelines.stream(), outboundPipelines.stream())
+                .toList();
+
+        connectedNotifier = buildNotifier(observers, (ob) -> ob.onConnected(context));
+        readCompletedNotifier = buildNotifier(observers, (ob) -> ob.onReadCompleted(context));
+        closedNotifier = buildNotifier(observers, (ob) -> ob.onClosed(context));
+
+    }
+
+    Runnable buildNotifier(List<ChannelObserver> observers, Consumer<ChannelObserver> handle) {
+        //TODO
+        //1. Skip 注解, 未重写的观察者跳过不通知
+        //2. 异常捕获,避免一个观察者的bug导致其他观察者无法被通知
+        return new Runnable() {
+            @Override
+            public void run() {
+                for (ChannelObserver observer : observers) {
+                    if (executor.inEventLoop()) {
+                        handle.accept(observer);
+                    } else {
+                        executor.execute(() -> handle.accept(observer));
+                    }
+                }
+            }
+        };
     }
 
     @SneakyThrows
@@ -160,6 +198,7 @@ public class ChannelIOHandler implements ChannelHandler {
             ((WritableByteChannel) channel).write(buf);
             if (buf.remaining() == 0) {
                 buffersToWrite.poll();
+                bufFuture.future.run();
             } else {
                 //如果还有剩余，意味 socket 发送缓冲着已经满了，只能等待下一次 Writable 事件
                 log.debug("suspend writing socket buffer");

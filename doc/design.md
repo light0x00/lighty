@@ -23,7 +23,7 @@
 netty 中, 如果一方调用 ctx.close() , 那么这一方的写缓冲区中的待写数据将丢弃 `AbstractUnsafe#close:735`. 
 而当另一方 read() 返回 -1 时, 会根据配置 `isAllowHalfClosure` 决定是否关闭 socket, 当选择关闭时 写缓冲区中的数据会被丢弃 `NioByteUnsafe#closeOnRead:101` 
 
-> 被丢弃的数据对应的 future 回调会返回异常 StacklessClosedChannelException
+> 被丢弃的数据对应的 future 回调会返回异常 StacklessClosedChannelExceptionΩ
 
 ### 事件循环 shutdown 
 

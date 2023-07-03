@@ -28,9 +28,10 @@ public interface ChannelHandlerConfigurer {
 
     EventExecutorGroup<?> executor();
 
-    List<ChannelInboundPipeline> inboundPipelines();
+    //
+    List<ChannelInboundHandler> inboundPipelines();
 
-    List<ChannelOutboundPipeline> outboundPipelines();
+    List<ChannelOutboundHandler> outboundPipelines();
 
     MessageHandler messageHandler();
 }

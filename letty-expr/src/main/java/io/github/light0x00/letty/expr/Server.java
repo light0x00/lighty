@@ -58,7 +58,7 @@ public class Server {
 
     }
 
-    private record Acceptor(NioEventLoopGroup group, ChannelHandlerConfigurer channelHandlerConfigurer) implements ChannelHandler {
+    private record Acceptor(NioEventLoopGroup group, ChannelHandlerConfigurer channelHandlerConfigurer) implements EventHandler {
 
         @SneakyThrows
         @Override
@@ -69,7 +69,7 @@ public class Server {
             group.next().register(incomingChannel, SelectionKey.OP_READ)
                     .addListener(futureTask -> {
                         SelectionKey selectionKey = futureTask.get();
-                        ChannelIOHandler handler = new ChannelIOHandler(incomingChannel, selectionKey, channelHandlerConfigurer);
+                        IOEventHandler handler = new IOEventHandler(incomingChannel, selectionKey, channelHandlerConfigurer);
                         selectionKey.attach(handler);
 
                     });
