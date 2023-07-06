@@ -1,7 +1,7 @@
-package io.github.light0x00.letty.core;
+package io.github.light0x00.letty.expr;
 
 
-import io.github.light0x00.letty.core.buffer.BufferPool;
+import io.github.light0x00.letty.expr.buffer.BufferPool;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +17,7 @@ public class BufferPoolTest {
     public void testRecycleIdempotence() {
         AtomicInteger allocCount = new AtomicInteger();
 
-        var bufferPool = new BufferPool<>((c) -> {
+        var bufferPool = new BufferPool((c) -> {
             allocCount.incrementAndGet();
             return ByteBuffer.allocate(c);
         });
@@ -41,7 +41,7 @@ public class BufferPoolTest {
     public void testSlice() {
         AtomicInteger allocCount = new AtomicInteger();
 
-        var bufferPool = new BufferPool<>((c) -> {
+        var bufferPool = new BufferPool((c) -> {
             allocCount.incrementAndGet();
             return ByteBuffer.allocate(c);
         });

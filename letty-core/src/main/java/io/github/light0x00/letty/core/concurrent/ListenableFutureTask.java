@@ -2,8 +2,8 @@ package io.github.light0x00.letty.core.concurrent;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
-import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nonnull;
 import javax.annotation.concurrent.GuardedBy;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,12 +25,16 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
         }, null);
     }
 
-    public ListenableFutureTask(@NotNull Callable<T> callable) {
+    public ListenableFutureTask(@Nonnull Callable<T> callable) {
         super(callable);
     }
 
-    public ListenableFutureTask(@NotNull Runnable runnable, T result) {
+    public ListenableFutureTask(@Nonnull Runnable runnable, T result) {
         super(runnable, result);
+    }
+
+    public ListenableFutureTask(@Nonnull Runnable runnable) {
+        super(runnable, null);
     }
 
     @Override
@@ -44,7 +48,7 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
     }
 
     @SneakyThrows
-    public T await(){
+    public T await() {
         return super.get();
     }
 

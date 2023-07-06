@@ -1,0 +1,4 @@
+- [ ] BufferPool 抽象
+- [ ] BufferPool 的 DirectByteBuffer 的回收问题
+- [ ] BufferPool LRU
+- [ ] EventLoop shutdown 资源回收

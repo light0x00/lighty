@@ -1,6 +1,6 @@
-package io.github.light0x00.letty.core;
+package io.github.light0x00.letty.expr.light0x00.letty.core;
 
-import io.github.light0x00.letty.core.concurrent.EventExecutor;
+import io.github.light0x00.letty.core.concurrent.EventLoopExecutor;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -36,13 +36,13 @@ public class ListenableFutureTaskTest {
     /**
      * 1. 测试执行 listener 的线程是否正确
      * 2. 测试是否执行 listener
-     * 3. 测试与 {@link EventExecutor} 的兼容性
+     * 3. 测试与 {@link EventLoopExecutor} 的兼容性
      */
     @SneakyThrows
     @Test
     public void test2() {
         //执行 future 的线程
-        EventExecutor eventExecutor = new EventExecutor(command -> new Thread(command).start());
+        EventLoopExecutor eventExecutor = new EventLoopExecutor(command -> new Thread(command).start());
         //执行 listener 的线程
         ExecutorService listenerExecutor = Executors.newSingleThreadExecutor(r -> new Thread(r, "listener-executor"));
 

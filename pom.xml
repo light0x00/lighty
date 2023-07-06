@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>letty-core</module>
+        <module>letty-expr</module>
     </modules>
 
     <properties>
@@ -22,6 +23,7 @@
 
     <dependencyManagement>
         <dependencies>
+
         </dependencies>
     </dependencyManagement>
 
@@ -55,14 +57,15 @@
             <version>3.0.2</version>
         </dependency>
         <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.26</version>
-        </dependency>
-        <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.4.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.28</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -72,6 +75,18 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.28</version>
+                        </path>
+                    </annotationProcessorPaths>
+                    <compilerArgs>
+                        <arg>-J-Duser.language=en</arg>
+                    </compilerArgs>
+                </configuration>
             </plugin>
 
             <plugin>

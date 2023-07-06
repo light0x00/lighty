@@ -9,11 +9,10 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
- * SingleThreadEventExecutor
  */
 @Slf4j
 @ThreadSafe
-public class EventExecutor implements Executor {
+public class EventLoopExecutor implements Executor {
 
     private static final int INITIAL = 0;
     private static final int READY = 1;
@@ -48,11 +47,9 @@ public class EventExecutor implements Executor {
     private volatile int state;
 
     /**
-     * 如果调用 {@link EventExecutor#execute(Runnable)} 添加的任务,
+     * 如果调用 {@link EventLoopExecutor#execute(Runnable)} 添加的任务,
      * 因任何原因而导致未被执行,(如队列容量上限或已经shutdown),
      * 都将转交给 {@link RejectedExecutionHandler}
-     *
-     * @implNote 为简化代码 暂时不支持自定义
      */
     private final RejectedExecutionHandler rejectedExecutionHandler;
 
@@ -60,25 +57,25 @@ public class EventExecutor implements Executor {
         throw new RejectedExecutionException();
     };
 
-    private static final AtomicIntegerFieldUpdater<EventExecutor> STATE_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(EventExecutor.class, "state");
+    private static final AtomicIntegerFieldUpdater<EventLoopExecutor> STATE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(EventLoopExecutor.class, "state");
 
     private final ListenableFutureTask<Void> shutdownFuture = new ListenableFutureTask<>(() -> {
     }, null);
 
-    public EventExecutor(Executor executor) {
+    public EventLoopExecutor(Executor executor) {
         this(Integer.MAX_VALUE, executor);
     }
 
-    public EventExecutor(Executor executor, RejectedExecutionHandler rejectedExecutionHandler) {
+    public EventLoopExecutor(Executor executor, RejectedExecutionHandler rejectedExecutionHandler) {
         this(Integer.MAX_VALUE, executor, rejectedExecutionHandler);
     }
 
-    public EventExecutor(int maxPendingTasks, Executor executor) {
+    public EventLoopExecutor(int maxPendingTasks, Executor executor) {
         this(maxPendingTasks, executor, DEFAULT_REJECTED_EXECUTION_HANDLER);
     }
 
-    public EventExecutor(int maxPendingTasks, Executor executor, RejectedExecutionHandler rejectedExecutionHandler) {
+    public EventLoopExecutor(int maxPendingTasks, Executor executor, RejectedExecutionHandler rejectedExecutionHandler) {
         this.executor = executor;
         this.queue = new LinkedBlockingQueue<>(maxPendingTasks);
         this.rejectedExecutionHandler = rejectedExecutionHandler;
@@ -98,12 +95,11 @@ public class EventExecutor implements Executor {
     }
 
     /**
-     * 执行一个指定任务,如果因任何原因而导致未被执行,比如队列容量上限或已经 shutdown/shutdownNow,该任务被转交给 {@link #rejectedExecutionHandler}
+     * 执行一个指定任务,如果因任何原因而导致未被执行,比如达到队列容量上限或已经 shutdown/shutdownNow,该任务被转交给 {@link #rejectedExecutionHandler}
      */
     @Override
     public void execute(@Nonnull Runnable command) {
         startWorker();
-
         /*
          * 如果因为 offer 失败(通常是触发队列容量上限导致), 则直接 reject, 避免 EvenLoop 线程投递任务而阻塞.
          * 参考 netty SingleThreadEventExecutor#addTask
@@ -136,7 +132,6 @@ public class EventExecutor implements Executor {
              * 当然非要解决,可以引入一个 ReadWriteLock , 控制 if-then-act 复合操作 和 write 操作之间的 race condition.
              */
             if (state > RUNNING) {
-                log.debug("状态已经改变! ");
                 if (queue.remove(command)) {
                     rejectedExecutionHandler.rejected(command, this);
                 }
@@ -211,6 +206,9 @@ public class EventExecutor implements Executor {
         }
     }
 
+    /**
+     * 返回因 {@link this#shutdownNow()} 而未完成的任务
+     */
     public List<Runnable> pendingTasks() {
         return this.queue.stream().toList();
     }
@@ -242,7 +240,7 @@ public class EventExecutor implements Executor {
                      * 1. 用户代码直接调用了被当前实例包装的 executor 的 shutdown/shutdownNow 方法
                      * 2. 用户代码调用了当前实例的 shutdown/shutdownNow 方法
                      *
-                     * 对于第一种, 这里忽略掉, 因此其不会影响 worker 的运行. 虽然“用户的感受是线程池关不掉”, 但这使其没有遵守协定导致.
+                     * 对于第一种, 这里忽略掉, 因此其不会影响 worker 的运行. 虽然“用户的感受是线程池关不掉”, 但这是其没有遵守协定导致.
                      * 第二种情况是预期的关闭线程池的正确操作.
                      */
                 } catch (RuntimeException e) {
@@ -264,7 +262,6 @@ public class EventExecutor implements Executor {
          */
         state = TERMINATED;
         shutdownFuture.run();
-        log.debug("shutdown promise resolved!");
     }
 
     private boolean shouldWork() {

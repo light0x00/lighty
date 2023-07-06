@@ -1,6 +1,6 @@
-package io.github.light0x00.letty.core;
+package io.github.light0x00.letty.expr.light0x00.letty.core;
 
-import io.github.light0x00.letty.core.concurrent.EventExecutor;
+import io.github.light0x00.letty.core.concurrent.EventLoopExecutor;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
@@ -16,7 +16,7 @@ public class EventExecutorTest {
         AtomicInteger rejectCount = new AtomicInteger();
         AtomicInteger exeCount = new AtomicInteger();
 
-        EventExecutor eventExecutor = new EventExecutor(
+        EventLoopExecutor eventExecutor = new EventLoopExecutor(
                 command -> new Thread(command).start(),
                 (task, executor) -> rejectCount.incrementAndGet()
         );
@@ -44,7 +44,7 @@ public class EventExecutorTest {
         AtomicInteger rejectCount = new AtomicInteger();
         AtomicInteger exeCount = new AtomicInteger();
 
-        EventExecutor eventExecutor = new EventExecutor(
+        EventLoopExecutor eventExecutor = new EventLoopExecutor(
                 command -> new Thread(command).start(),
                 (task, executor) -> rejectCount.incrementAndGet()
         );
@@ -76,7 +76,7 @@ public class EventExecutorTest {
         AtomicInteger exeCount = new AtomicInteger();
 
 
-        EventExecutor eventExecutor = new EventExecutor(
+        EventLoopExecutor eventExecutor = new EventLoopExecutor(
                 command -> new Thread(command).start(),
                 (task, executor) -> rejectCount.incrementAndGet()
         );
