@@ -1,26 +1,33 @@
 package io.github.light0x00.letty.expr.buffer;
 
+import io.github.light0x00.letty.expr.RingByteBuffer;
+
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class RecyclableByteBuffer<T extends ByteBuffer> extends ReadWriteByteBuffer<T> {
 
-    protected final T bakingBuffer;
+public class RecyclableByteBuffer extends RingByteBuffer {
 
-    private final BufferPool<T> bufferPool;
+    protected final ByteBuffer bakingBuffer;
+
+    private final BufferPool bufferPool;
 
     private final AtomicBoolean recycled = new AtomicBoolean();
 
-    @SuppressWarnings("unchecked")
-    public RecyclableByteBuffer(T originalBuffer, int offset, int length, BufferPool<T> bufferPool) {
-        super((T) originalBuffer.slice(offset, length));
 
-        this.bakingBuffer = originalBuffer;
-        this.bufferPool = bufferPool;
+    @SuppressWarnings("unchecked")
+    public RecyclableByteBuffer(ByteBuffer originalBuffer, int offset, int length, BufferPool bufferPool) {
+        this(originalBuffer, originalBuffer.slice(offset, length), bufferPool);
     }
 
-    public RecyclableByteBuffer(T originalBuffer, BufferPool<T> bufferPool) {
-        this(originalBuffer, 0, originalBuffer.capacity(), bufferPool);
+    public RecyclableByteBuffer(ByteBuffer originalBuffer, BufferPool bufferPool) {
+        this(originalBuffer, originalBuffer, bufferPool);
+    }
+
+    public RecyclableByteBuffer(ByteBuffer originalBuffer, ByteBuffer sliceBuffer, BufferPool bufferPool) {
+        super(sliceBuffer);
+        this.bakingBuffer = originalBuffer;
+        this.bufferPool = bufferPool;
     }
 
     public void release() {
@@ -28,10 +35,10 @@ public class RecyclableByteBuffer<T extends ByteBuffer> extends ReadWriteByteBuf
             bufferPool.recycle(bakingBuffer);
     }
 
-    @Override
-    protected void beforeAccessBuffer() {
-        if (recycled.get()) {
-            throw new IllegalStateException("Illegal access to buffer. The baking buffer has been recycled.");
-        }
-    }
+//    @Override
+//    protected void beforeAccessBuffer() {
+//        if (recycled.get()) {
+//            throw new IllegalStateException("Illegal access to buffer. The baking buffer has been recycled.");
+//        }
+//    }
 }

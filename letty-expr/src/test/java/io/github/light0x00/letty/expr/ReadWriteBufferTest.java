@@ -10,13 +10,13 @@ public class ReadWriteBufferTest {
 
     @Test
     public void testRwBuf(){
-        var rwBuffer = new ReadWriteByteBuffer<>(ByteBuffer.allocateDirect(4));
+        var rwBuffer = new ReadWriteByteBuffer(ByteBuffer.allocateDirect(4));
 
-        ByteBuffer wBuffer = rwBuffer.writeUponBuffer();
+        ByteBuffer wBuffer = rwBuffer.bufferW();
         wBuffer.put((byte)1);
         wBuffer.put((byte)3);
 
-        ByteBuffer rBuffer = rwBuffer.readUponBuffer();
+        ByteBuffer rBuffer = rwBuffer.bufferR();
 
         Assertions.assertEquals( (byte) 1,rBuffer.get());
         Assertions.assertEquals( (byte) 3,rBuffer.get());

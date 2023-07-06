@@ -17,7 +17,7 @@ public class BufferPoolTest {
     public void testRecycleIdempotence() {
         AtomicInteger allocCount = new AtomicInteger();
 
-        var bufferPool = new BufferPool<>((c) -> {
+        var bufferPool = new BufferPool((c) -> {
             allocCount.incrementAndGet();
             return ByteBuffer.allocate(c);
         });
@@ -41,7 +41,7 @@ public class BufferPoolTest {
     public void testSlice() {
         AtomicInteger allocCount = new AtomicInteger();
 
-        var bufferPool = new BufferPool<>((c) -> {
+        var bufferPool = new BufferPool((c) -> {
             allocCount.incrementAndGet();
             return ByteBuffer.allocate(c);
         });

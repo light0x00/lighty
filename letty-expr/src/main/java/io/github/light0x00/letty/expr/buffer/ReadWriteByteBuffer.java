@@ -2,32 +2,34 @@ package io.github.light0x00.letty.expr.buffer;
 
 import java.nio.ByteBuffer;
 
-public class ReadWriteByteBuffer<T extends ByteBuffer> {
+public class ReadWriteByteBuffer{
 
-    private final T readSideBuffer;
-    private final T writeSideBuffer;
+    private final ByteBuffer bufferR;
+    private final ByteBuffer bufferW;
 
     @SuppressWarnings("unchecked")
-    public ReadWriteByteBuffer(T originalBuffer) {
-        this.writeSideBuffer = originalBuffer;
-        this.readSideBuffer = (T) writeSideBuffer.asReadOnlyBuffer();
+    public ReadWriteByteBuffer(ByteBuffer originalBuffer) {
+        this.bufferW = originalBuffer;
+        this.bufferR = bufferW.asReadOnlyBuffer();
     }
 
-    public T readUponBuffer() {
+    public ByteBuffer bufferR() {
         beforeAccessBuffer();
-        return readSideBuffer;
+        return bufferR;
     }
 
-    public T writeUponBuffer() {
+    public ByteBuffer bufferW() {
         beforeAccessBuffer();
-        return writeSideBuffer;
+        return bufferW;
     }
+
 
     public int capacity(){
         beforeAccessBuffer();
-        return readSideBuffer.capacity();
+        return bufferR.capacity();
     }
 
     protected void beforeAccessBuffer(){
     }
+
 }

@@ -10,5 +10,7 @@
     </parent>
 
     <artifactId>letty-expr</artifactId>
+    <dependencies>
 
+    </dependencies>
 </project>

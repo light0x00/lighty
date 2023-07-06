@@ -9,9 +9,16 @@ import javax.annotation.concurrent.GuardedBy;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * @author light0x00
+ * @since 2023/6/16
+ */
 public class ListenableFutureTask<T> extends FutureTask<T> {
 
     @GuardedBy("this")
@@ -24,10 +31,11 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
      * - If a listener added before the FutureTask has been done, the runner who executes {@link #run} will be the notifier.
      * - Otherwise, the current thread who call {@link #addListener(FutureListener, Executor)} with null executor will be the notifier.
      * - Whenever a thread who call {@link #addListener(FutureListener, Executor)} with nonnull executor, then the specified executor will be notifier.
-     *
      */
     @Nullable
     private final Executor defaultNotifier;
+
+    AtomicBoolean hasRun = new AtomicBoolean();
 
     /**
      * For waite/notify scenarios
@@ -49,12 +57,26 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
 
     @Override
     protected void done() {
-        notifyListeners();
+        if (hasRun.compareAndSet(false, true))
+            notifyListeners();
     }
 
     @SneakyThrows   // we don't need the fucking checked exception, so here make it implicit. ^ ^
     public T get() {
         return super.get();
+    }
+
+    public boolean isSuccess() {
+        return cause() == null;
+    }
+
+    public Throwable cause() {
+        try {
+            super.get();
+            return null;
+        } catch (ExecutionException | InterruptedException e) {
+            return e;
+        }
     }
 
     public ListenableFutureTask<T> addListener(FutureListener<T> listener) {

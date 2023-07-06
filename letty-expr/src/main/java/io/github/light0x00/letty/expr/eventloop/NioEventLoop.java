@@ -1,8 +1,10 @@
 package io.github.light0x00.letty.expr.eventloop;
 
-import io.github.light0x00.letty.expr.EventHandler;
+import io.github.light0x00.letty.expr.handler.EventHandler;
 import io.github.light0x00.letty.expr.ListenableFutureTask;
+import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -22,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author light0x00
  * @since 2023/6/16
  */
+@Slf4j
 public class NioEventLoop implements EventExecutor {
 
     private final Queue<Runnable> tasks = new ConcurrentLinkedDeque<>();
@@ -34,11 +37,12 @@ public class NioEventLoop implements EventExecutor {
 
     private volatile Thread workerThread;
 
-//    private final ChannelHandler channelHandler;
+    @Getter
+    private EventExecutorGroup<NioEventLoop> group;
 
-    public NioEventLoop(Executor executor) throws IOException {
-//        this.channelHandler = channelHandler;
+    public NioEventLoop(Executor executor, EventExecutorGroup<NioEventLoop> group) throws IOException {
         this.executor = executor;
+        this.group = group;
     }
 
     public void addTask(Runnable runnable, boolean wakeup) {
@@ -103,7 +107,7 @@ public class NioEventLoop implements EventExecutor {
         while (!Thread.currentThread().isInterrupted()) {
             Runnable c;
             while ((c = tasks.poll()) != null) {
-                c.run();
+                safeExecute(c);
             }
             selector.select();
             Set<SelectionKey> events = selector.selectedKeys();
@@ -112,9 +116,25 @@ public class NioEventLoop implements EventExecutor {
                 SelectionKey event = it.next();
                 //参考 netty NioEventLoop#processSelectedKeysPlain 682
                 var channelHandler = (EventHandler) event.attachment();
-                channelHandler.onEvent(event);
+                try {
+                    channelHandler.onEvent(event);
+                } catch (Throwable th) {
+                    log.error("Error occurred while process event", th); //TODO 交给异常捕获
+                    //socket interestSet readySet 都是有状态的, 原则上只要处理时出现未处理异常,就应当 fail-fast, 避免基于错误的状态继续.
+                    event.cancel();
+                    event.channel().close();
+                }
                 it.remove();
             }
+        }
+    }
+
+    private void safeExecute(Runnable r) {
+        try {
+            r.run();
+        } catch (Throwable th) {
+            log.error("",th);
+            //TODO 交给异常捕获
         }
     }
 

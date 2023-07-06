@@ -1,9 +1,15 @@
-package io.github.light0x00.letty.expr;
+package io.github.light0x00.letty.expr.handler;
 
+import io.github.light0x00.letty.expr.ChannelContext;
+import io.github.light0x00.letty.expr.LettyConf;
+import io.github.light0x00.letty.expr.ListenableFutureTask;
+import io.github.light0x00.letty.expr.RingByteBuffer;
 import io.github.light0x00.letty.expr.buffer.BufferPool;
-import io.github.light0x00.letty.expr.buffer.GLOBAL_BUFFER_POOL;
 import io.github.light0x00.letty.expr.buffer.RecyclableByteBuffer;
 import io.github.light0x00.letty.expr.eventloop.EventExecutor;
+import io.github.light0x00.letty.expr.eventloop.EventExecutorGroup;
+import io.github.light0x00.letty.expr.eventloop.NioEventLoop;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -12,11 +18,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -26,17 +33,17 @@ import java.util.stream.Stream;
 @Slf4j
 public class IOEventHandler implements EventHandler {
 
-    BufferPool<ByteBuffer> bufferPool;
+    final NioEventLoop eventLoop;
+
+    final SelectionKey key;
+
+    ChannelContext context;
+
+    BufferPool bufferPool;
 
     LettyConf lettyConf;
 
     SocketChannel channel;
-
-    SelectionKey key;
-
-    ChannelContext context;
-
-    MessageHandler messageHandler;
 
     EventExecutor executor;
 
@@ -50,10 +57,15 @@ public class IOEventHandler implements EventHandler {
      */
     volatile boolean outboundFIN;
 
-
     /**
-     * 两端均关闭时,即两阶段回收完成时触发
+     * 握手成功后触发
      */
+    @Getter
+    ListenableFutureTask<Void> connectedFuture = new ListenableFutureTask<>(null);
+    /**
+     * 两端关闭时,即两阶段回收完成时触发
+     */
+    @Getter
     ListenableFutureTask<Void> closeFuture = new ListenableFutureTask<>(null);
 
     /**
@@ -65,8 +77,7 @@ public class IOEventHandler implements EventHandler {
      */
     final Queue<BufferFuturePair> buffersToWrite = new ConcurrentLinkedDeque<>();
 
-
-    Invocation inboundInvocation;
+    InboundPipelineInvocation inboundInvocation;
 
     OutboundInvocation outboundInvocation;
 
@@ -76,18 +87,33 @@ public class IOEventHandler implements EventHandler {
 
     Runnable closedNotifier;
 
-    public IOEventHandler(SocketChannel channel, SelectionKey key, ChannelHandlerConfigurer configurer) {
+    public IOEventHandler(NioEventLoop eventLoop, SocketChannel channel, SelectionKey key, ChannelHandlerConfigurer configurer) {
+        this.eventLoop = eventLoop;
         this.channel = channel;
         this.key = key;
-
         init(configurer);
     }
 
     private void init(ChannelHandlerConfigurer configurer) {
-        executor = configurer.executor().next();
         lettyConf = configurer.lettyConf();
         bufferPool = configurer.bufferPool();
+
+        //executor
+        EventExecutorGroup<?> executorGroup = configurer.executorGroup();
+        if (eventLoop.group() == executorGroup) {
+            executor = eventLoop;
+        } else {
+            executor = executorGroup.next();
+        }
+
+        //context
         context = new ChannelContext() {
+
+            @NotNull
+            @Override
+            public RecyclableByteBuffer allocateBuffer(int capacity) {
+                return bufferPool.take(capacity);
+            }
 
             @NotNull
             @Override
@@ -103,29 +129,28 @@ public class IOEventHandler implements EventHandler {
             }
         };
 
-        List<ChannelInboundHandler> inboundPipelines = configurer.inboundPipelines();
-        List<ChannelOutboundHandler> outboundPipelines = configurer.outboundPipelines();
-        messageHandler = configurer.messageHandler();
+        //pipeline
+        List<InboundChannelHandler> inboundPipelines = configurer.inboundHandlers();
+        List<OutboundChannelHandler> outboundPipelines = configurer.outboundHandlers();
 
-        inboundInvocation = ChannelInboundHandler.buildInvocationChain(
-                context, inboundPipelines, (msg) -> messageHandler.onMessage(context, msg));
+        inboundInvocation = InboundPipelineInvocation.buildInvocationChain(
+                context, inboundPipelines);
 
-        outboundInvocation = ChannelOutboundHandler.buildInvocationChain(
+        outboundInvocation = OutboundInvocation.buildInvocationChain(
                 context, outboundPipelines, this::write);
 
-
-        List<ChannelObserver> observers = Stream.concat(inboundPipelines.stream(), outboundPipelines.stream())
-                .toList();
+        //observers
+        Set<ChannelObserver> observers = Stream.concat(inboundPipelines.stream(), outboundPipelines.stream())
+                .collect(Collectors.toSet());  //去重,主要是针对同时实现了 inbound、outbound 接口的 handler
 
         connectedNotifier = buildNotifier(observers, (ob) -> ob.onConnected(context));
         readCompletedNotifier = buildNotifier(observers, (ob) -> ob.onReadCompleted(context));
         closedNotifier = buildNotifier(observers, (ob) -> ob.onClosed(context));
-
     }
 
-    Runnable buildNotifier(List<ChannelObserver> observers, Consumer<ChannelObserver> handle) {
+    private Runnable buildNotifier(Set<ChannelObserver> observers, Consumer<ChannelObserver> handle) {
         //TODO
-        //1. Skip 注解, 未重写的观察者跳过不通知
+        //1. Skip 注解, 未重写的观察者跳过不通知 + 去重
         //2. 异常捕获,避免一个观察者的bug导致其他观察者无法被通知
         return new Runnable() {
             @Override
@@ -155,19 +180,19 @@ public class IOEventHandler implements EventHandler {
 
     private void processConnectableEvent() throws IOException {
         SocketChannel channel = (SocketChannel) key.channel();
+
         channel.finishConnect();
         key.interestOps(SelectionKey.OP_READ);
 
-        messageHandler.onOpen(context);
+        connectedFuture.run();
+        connectedNotifier.run();
     }
 
     private void processReadableEvent() throws IOException {
         int n;
         do {
-            RecyclableByteBuffer<ByteBuffer> buf = GLOBAL_BUFFER_POOL.take(lettyConf.readBufSize());
-            ByteBuffer bufW = buf.writeUponBuffer();
-
-            n = channel.read(bufW);
+            RecyclableByteBuffer buf = bufferPool.take(lettyConf.readBufSize());
+            n = buf.readFromChannel(channel);
             if (executor.inEventLoop()) {
                 inboundInvocation.invoke(buf);
             } else {
@@ -188,15 +213,15 @@ public class IOEventHandler implements EventHandler {
 
         for (BufferFuturePair bufFuture; (bufFuture = buffersToWrite.peek()) != null; ) {
 
-            ByteBuffer buf = bufFuture.buffer();
+            RingByteBuffer buf = bufFuture.buffer();
             /*
              * Some types of channels, depending upon their state,
              * may write only some of the bytes or possibly none at all.
              * A socket channel in non-blocking mode, for example,
              * cannot write any more bytes than are free in the socket's output buffer.
              */
-            ((WritableByteChannel) channel).write(buf);
-            if (buf.remaining() == 0) {
+            buf.writeToChannel(channel);
+            if (buf.remainingCanGet() == 0) {
                 buffersToWrite.poll();
                 bufFuture.future.run();
             } else {
@@ -214,9 +239,13 @@ public class IOEventHandler implements EventHandler {
     }
 
     private ListenableFutureTask<Void> write(Object data, ListenableFutureTask<Void> writeFuture) {
-        if (!(data instanceof ByteBuffer buf))
-            throw new ClassCastException("Unsupported type:" + data.getClass());
-        pendingWriteIfNotClosed(writeFuture, buf);
+        if (data instanceof RingByteBuffer buf) {
+            pendingWriteIfNotClosed(writeFuture, buf);
+        } else if (data instanceof ByteBuffer buf) {
+            pendingWriteIfNotClosed(writeFuture, new RingByteBuffer(buf));
+        } else {
+            throw new ClassCastException("Unsupported data type to write:" + data.getClass());
+        }
         return writeFuture;
     }
 
@@ -237,7 +266,7 @@ public class IOEventHandler implements EventHandler {
     /**
      * 如果当前端未关闭,即 socket 出方向未关闭,则追加写到写缓冲区
      */
-    private void pendingWriteIfNotClosed(ListenableFutureTask<Void> writeFuture, ByteBuffer buf) {
+    private void pendingWriteIfNotClosed(ListenableFutureTask<Void> writeFuture, RingByteBuffer buf) {
         synchronized (buffersToWrite) {
             if (outboundFIN) {
                 throw new IllegalStateException("Socket Closed");
@@ -260,7 +289,7 @@ public class IOEventHandler implements EventHandler {
         }
     }
 
-    private record BufferFuturePair(ByteBuffer buffer, ListenableFutureTask<Void> future) {
+    private record BufferFuturePair(RingByteBuffer buffer, ListenableFutureTask<Void> future) {
 
     }
 }

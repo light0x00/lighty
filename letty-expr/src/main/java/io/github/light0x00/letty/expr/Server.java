@@ -1,7 +1,12 @@
 package io.github.light0x00.letty.expr;
 
 
+import io.github.light0x00.letty.expr.eventloop.NioEventLoop;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoopGroup;
+import io.github.light0x00.letty.expr.handler.ChannelHandlerConfigurer;
+import io.github.light0x00.letty.expr.handler.EventHandler;
+import io.github.light0x00.letty.expr.handler.IOEventHandler;
+import io.github.light0x00.letty.expr.handler.ServerIOEventHandler;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -58,21 +63,21 @@ public class Server {
 
     }
 
-    private record Acceptor(NioEventLoopGroup group, ChannelHandlerConfigurer channelHandlerConfigurer) implements EventHandler {
+    private record Acceptor(NioEventLoopGroup group,
+                            ChannelHandlerConfigurer channelHandlerConfigurer) implements EventHandler {
 
         @SneakyThrows
         @Override
         public void onEvent(SelectionKey key) {
             SocketChannel incomingChannel = ((ServerSocketChannel) key.channel()).accept();
             incomingChannel.configureBlocking(false);
-
-            group.next().register(incomingChannel, SelectionKey.OP_READ)
+            NioEventLoop eventLoop = group.next();
+            eventLoop.register(incomingChannel, SelectionKey.OP_READ)
                     .addListener(futureTask -> {
                         SelectionKey selectionKey = futureTask.get();
-                        IOEventHandler handler = new IOEventHandler(incomingChannel, selectionKey, channelHandlerConfigurer);
+                        IOEventHandler handler = new ServerIOEventHandler(eventLoop, incomingChannel, selectionKey, channelHandlerConfigurer);
                         selectionKey.attach(handler);
-
-                    });
+                    }, eventLoop);
 
         }
     }

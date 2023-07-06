@@ -1,5 +1,6 @@
-package io.github.light0x00.letty.expr;
+package io.github.light0x00.letty.expr.handler;
 
+import io.github.light0x00.letty.expr.LettyConf;
 import io.github.light0x00.letty.expr.buffer.BufferPool;
 import io.github.light0x00.letty.expr.eventloop.EventExecutorGroup;
 
@@ -22,16 +23,14 @@ public interface ChannelHandlerConfigurer {
         };
     }
 
-    default BufferPool<ByteBuffer> bufferPool() {
-        return new BufferPool<>(ByteBuffer::allocateDirect);
+    default BufferPool bufferPool() {
+        return new BufferPool(ByteBuffer::allocateDirect);
     }
 
-    EventExecutorGroup<?> executor();
+    EventExecutorGroup<?> executorGroup();
 
-    //
-    List<ChannelInboundHandler> inboundPipelines();
+    List<InboundChannelHandler> inboundHandlers();
 
-    List<ChannelOutboundHandler> outboundPipelines();
+    List<OutboundChannelHandler> outboundHandlers();
 
-    MessageHandler messageHandler();
 }

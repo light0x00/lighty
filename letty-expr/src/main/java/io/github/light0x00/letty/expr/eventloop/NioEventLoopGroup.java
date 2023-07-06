@@ -29,7 +29,7 @@ public class NioEventLoopGroup implements EventExecutorGroup<NioEventLoop> {
     public NioEventLoopGroup(int threadNum, Executor executor) {
         eventLoops = new NioEventLoop[threadNum];
         for (int i = 0; i < threadNum; i++) {
-            eventLoops[i] = new NioEventLoop(executor);
+            eventLoops[i] = new NioEventLoop(executor, this);
         }
         eventExecutorChooser = newChooser(eventLoops);
     }

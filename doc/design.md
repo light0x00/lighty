@@ -32,6 +32,17 @@ netty 中, 如果一方调用 ctx.close() , 那么这一方的写缓冲区中的
 清除 selector
 执行完剩余任务
 
+### Buffer 回收
+
+写 buffer 回收机制
+
+读 buffer 回收机制
+
+### 异常处理
+
+连接意外断开
+
+用户代码导致异常(是否中断事件循环)
 
 ```java
   if ((interestOps & SelectionKey.OP_WRITE) == 0) {
@@ -39,3 +50,4 @@ netty 中, 如果一方调用 ctx.close() , 那么这一方的写缓冲区中的
   }
   ch.isOpen() && ch.isConnected();
 ```
+
