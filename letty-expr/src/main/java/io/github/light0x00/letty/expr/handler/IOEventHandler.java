@@ -156,7 +156,7 @@ public class IOEventHandler implements EventHandler {
             @Override
             public void run() {
                 for (ChannelObserver observer : observers) {
-                    if (executor.inEventLoop()) {
+                     if (executor.inEventLoop()) {
                         handle.accept(observer);
                     } else {
                         executor.execute(() -> handle.accept(observer));

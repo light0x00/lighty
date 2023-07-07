@@ -31,22 +31,21 @@ public class Client {
         channel.configureBlocking(false);
 
         var connectedFuture = new ListenableFutureTask<Void>(null);
+
         NioEventLoop eventLoop = group.next();
-        eventLoop.register(channel, SelectionKey.OP_CONNECT)
+        eventLoop.register(channel, SelectionKey.OP_CONNECT,
+                        key -> {
+                            IOEventHandler eventHandler = new IOEventHandler(eventLoop, channel, key, handlerConfigurer);
+                            eventHandler.connectedFuture().addListener((f) -> connectedFuture.run());
+                            return eventHandler;
+                        })
                 .addListener(new FutureListener<SelectionKey>() {
                     @SneakyThrows
                     @Override
                     public void operationComplete(ListenableFutureTask<SelectionKey> f) {
-                        SelectionKey key = f.get();
                         // attach context before connect , so that to ensure the context not null when the event triggered.
                         // connect 动作应发生在 attach context 之后, 这样才能保证事件触发时能拿到非空的 context
-                        IOEventHandler eventHandler = new IOEventHandler(eventLoop, channel, key, handlerConfigurer);
-                        key.attach(eventHandler);
-
                         channel.connect(address);
-
-                        eventHandler.connectedFuture()
-                                .addListener((f2) -> connectedFuture.run());
                     }
                 });
         return connectedFuture;

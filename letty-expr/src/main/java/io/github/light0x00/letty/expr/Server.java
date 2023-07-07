@@ -1,12 +1,9 @@
 package io.github.light0x00.letty.expr;
 
 
-import io.github.light0x00.letty.expr.eventloop.NioEventLoop;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoopGroup;
+import io.github.light0x00.letty.expr.handler.Acceptor;
 import io.github.light0x00.letty.expr.handler.ChannelHandlerConfigurer;
-import io.github.light0x00.letty.expr.handler.EventHandler;
-import io.github.light0x00.letty.expr.handler.IOEventHandler;
-import io.github.light0x00.letty.expr.handler.ServerIOEventHandler;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -14,7 +11,6 @@ import java.net.SocketAddress;
 import java.net.StandardProtocolFamily;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 
 /**
  * @author light0x00
@@ -47,39 +43,24 @@ public class Server {
     public ListenableFutureTask<Void> bind(SocketAddress address) {
         ServerSocketChannel ssc = ServerSocketChannel.open(StandardProtocolFamily.INET);
         ssc.configureBlocking(false);
-        ssc.bind(address);
 
         var bindFuture = new ListenableFutureTask<Void>(null);
 
         parent.next().register(ssc, SelectionKey.OP_ACCEPT, acceptor)
-                .addListener((f) -> {
-                    log.debug("Listen on " + address);
-                    bindFuture.run();
+                .addListener(new FutureListener<SelectionKey>() {
+                    @SneakyThrows
+                    @Override
+                    public void operationComplete(ListenableFutureTask<SelectionKey> futureTask) {
+                        ssc.bind(address);
+                        log.debug("Listen on " + address);
+                        bindFuture.run();
+                    }
                 });
         return bindFuture;
     }
 
     public void shutdown() {
 
-    }
-
-    private record Acceptor(NioEventLoopGroup group,
-                            ChannelHandlerConfigurer channelHandlerConfigurer) implements EventHandler {
-
-        @SneakyThrows
-        @Override
-        public void onEvent(SelectionKey key) {
-            SocketChannel incomingChannel = ((ServerSocketChannel) key.channel()).accept();
-            incomingChannel.configureBlocking(false);
-            NioEventLoop eventLoop = group.next();
-            eventLoop.register(incomingChannel, SelectionKey.OP_READ)
-                    .addListener(futureTask -> {
-                        SelectionKey selectionKey = futureTask.get();
-                        IOEventHandler handler = new ServerIOEventHandler(eventLoop, incomingChannel, selectionKey, channelHandlerConfigurer);
-                        selectionKey.attach(handler);
-                    }, eventLoop);
-
-        }
     }
 
 }

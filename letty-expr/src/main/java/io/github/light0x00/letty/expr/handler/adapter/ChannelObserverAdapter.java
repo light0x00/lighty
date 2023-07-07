@@ -1,6 +1,7 @@
 package io.github.light0x00.letty.expr.handler.adapter;
 
 import io.github.light0x00.letty.expr.ChannelContext;
+import io.github.light0x00.letty.expr.Skip;
 import io.github.light0x00.letty.expr.handler.ChannelObserver;
 
 /**
@@ -10,16 +11,19 @@ import io.github.light0x00.letty.expr.handler.ChannelObserver;
 public abstract class ChannelObserverAdapter implements ChannelObserver {
 
     @Override
+    @Skip
     public void onConnected(ChannelContext context) {
 
     }
 
     @Override
+    @Skip
     public void onReadCompleted(ChannelContext context) {
 
     }
 
     @Override
+    @Skip
     public void onClosed(ChannelContext context) {
 
     }

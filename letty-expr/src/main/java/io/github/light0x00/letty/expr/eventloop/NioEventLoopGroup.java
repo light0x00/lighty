@@ -20,7 +20,6 @@ public class NioEventLoopGroup implements EventExecutorGroup<NioEventLoop> {
 
     private final Chooser<NioEventLoop> eventExecutorChooser;
 
-    @SneakyThrows
     public NioEventLoopGroup(int threadNum) {
         this(threadNum, new SingleThreadPerTaskExecutor());
     }

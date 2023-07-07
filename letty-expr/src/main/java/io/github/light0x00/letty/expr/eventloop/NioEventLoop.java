@@ -1,7 +1,7 @@
 package io.github.light0x00.letty.expr.eventloop;
 
-import io.github.light0x00.letty.expr.handler.EventHandler;
 import io.github.light0x00.letty.expr.ListenableFutureTask;
+import io.github.light0x00.letty.expr.handler.EventHandler;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +19,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 /**
  * @author light0x00
@@ -60,8 +61,8 @@ public class NioEventLoop implements EventExecutor {
         }
     }
 
-    public ListenableFutureTask<SelectionKey> register(final SelectableChannel channel, final int interestOps) {
-        return register(channel, interestOps, null);
+    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, @Nullable EventHandler handler) {
+        return register(channel, interestOps, (k) -> handler);
     }
 
     /**
@@ -70,12 +71,14 @@ public class NioEventLoop implements EventExecutor {
      * @implNote The listeners of the future returned, will be executed in event loop by default.
      * Be aware the concurrent race when change the executor.
      */
-    public ListenableFutureTask<SelectionKey> register(final SelectableChannel channel, final int interestOps, @Nullable Object att) {
+    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, Function<SelectionKey, EventHandler> eventHandlerProvider) {
         var future = new ListenableFutureTask<>(new Callable<SelectionKey>() {
             @Override
             @SneakyThrows
             public SelectionKey call() {
-                return channel.register(selector, interestOps, att);
+                SelectionKey key = channel.register(selector, interestOps);
+                key.attach(eventHandlerProvider.apply(key));
+                return key;
             }
         }, this);
         execute(future);
@@ -114,10 +117,9 @@ public class NioEventLoop implements EventExecutor {
             Iterator<SelectionKey> it = events.iterator();
             while (it.hasNext()) {
                 SelectionKey event = it.next();
-                //参考 netty NioEventLoop#processSelectedKeysPlain 682
-                var channelHandler = (EventHandler) event.attachment();
+                var eventHandler = (EventHandler) event.attachment();
                 try {
-                    channelHandler.onEvent(event);
+                    eventHandler.onEvent(event);
                 } catch (Throwable th) {
                     log.error("Error occurred while process event", th); //TODO 交给异常捕获
                     //socket interestSet readySet 都是有状态的, 原则上只要处理时出现未处理异常,就应当 fail-fast, 避免基于错误的状态继续.
@@ -133,7 +135,7 @@ public class NioEventLoop implements EventExecutor {
         try {
             r.run();
         } catch (Throwable th) {
-            log.error("",th);
+            log.error("", th);
             //TODO 交给异常捕获
         }
     }

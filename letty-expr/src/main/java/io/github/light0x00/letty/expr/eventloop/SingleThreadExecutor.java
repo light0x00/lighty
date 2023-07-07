@@ -11,7 +11,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
- *
+ * @author light0x00
+ * @since 2023/6/16
  */
 @Slf4j
 @ThreadSafe
@@ -52,11 +53,11 @@ public class SingleThreadExecutor implements EventExecutor {
     /**
      * 如果调用 {@link SingleThreadExecutor#execute(Runnable)} 添加的任务,
      * 因任何原因而导致未被执行,(如队列容量上限或已经shutdown),
-     * 都将转交给 {@link io.github.light0x00.letty.expr.RejectedExecutionHandler}
+     * 都将转交给 {@link RejectedExecutionHandler}
      */
-    private final io.github.light0x00.letty.expr.RejectedExecutionHandler rejectedExecutionHandler;
+    private final RejectedExecutionHandler rejectedExecutionHandler;
 
-    private static final io.github.light0x00.letty.expr.RejectedExecutionHandler DEFAULT_REJECTED_EXECUTION_HANDLER = (task, executor) -> {
+    private static final RejectedExecutionHandler DEFAULT_REJECTED_EXECUTION_HANDLER = (task, executor) -> {
         throw new RejectedExecutionException();
     };
 
@@ -70,7 +71,7 @@ public class SingleThreadExecutor implements EventExecutor {
         this(Integer.MAX_VALUE, executor);
     }
 
-    public SingleThreadExecutor(Executor executor, io.github.light0x00.letty.expr.RejectedExecutionHandler rejectedExecutionHandler) {
+    public SingleThreadExecutor(Executor executor, RejectedExecutionHandler rejectedExecutionHandler) {
         this(Integer.MAX_VALUE, executor, rejectedExecutionHandler);
     }
 
@@ -262,7 +263,7 @@ public class SingleThreadExecutor implements EventExecutor {
         }
         /*
          * 当 shouldWork 返回 false, 意味着 state 状态已经不可变了,所以可以直接更新.
-         * 但是存在幂等问题,针对这一点目前调用方可以保证只调用一次.
+         * 但是存在幂等问题,针对这一点目前调用侧可以保证只调用一次.
          */
         state = TERMINATED;
         shutdownFuture.run();
