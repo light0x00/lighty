@@ -1,7 +1,7 @@
 package io.github.light0x00.letty.expr.handler.adapter;
 
-import io.github.light0x00.letty.expr.ChannelContext;
-import io.github.light0x00.letty.expr.Skip;
+import io.github.light0x00.letty.expr.handler.ChannelContext;
+import io.github.light0x00.letty.expr.util.Skip;
 import io.github.light0x00.letty.expr.handler.OutboundChannelHandler;
 import io.github.light0x00.letty.expr.handler.OutboundPipeline;
 

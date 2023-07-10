@@ -1,9 +1,10 @@
 package io.github.light0x00.letty.expr.handler;
 
-import io.github.light0x00.letty.expr.ChannelContext;
-import io.github.light0x00.letty.expr.LettyConf;
-import io.github.light0x00.letty.expr.ListenableFutureTask;
-import io.github.light0x00.letty.expr.RingByteBuffer;
+import io.github.light0x00.letty.expr.ChannelConfigurationProvider;
+import io.github.light0x00.letty.expr.LettyConfig;
+import io.github.light0x00.letty.expr.NioSocketChannel;
+import io.github.light0x00.letty.expr.concurrent.ListenableFutureTask;
+import io.github.light0x00.letty.expr.buffer.RingByteBuffer;
 import io.github.light0x00.letty.expr.buffer.BufferPool;
 import io.github.light0x00.letty.expr.buffer.RecyclableByteBuffer;
 import io.github.light0x00.letty.expr.eventloop.EventExecutor;
@@ -18,13 +19,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.List;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author light0x00
@@ -41,9 +37,11 @@ public class IOEventHandler implements EventHandler {
 
     BufferPool bufferPool;
 
-    LettyConf lettyConf;
+    LettyConfig lettyConf;
 
     SocketChannel channel;
+
+    NioSocketChannel channelWrapper;
 
     EventExecutor executor;
 
@@ -66,7 +64,7 @@ public class IOEventHandler implements EventHandler {
      * 两端关闭时,即两阶段回收完成时触发
      */
     @Getter
-    ListenableFutureTask<Void> closeFuture = new ListenableFutureTask<>(null);
+    ListenableFutureTask<Void> closedFuture = new ListenableFutureTask<>(null);
 
     /**
      * NIO 线程 {@link #processReadableEvent()} 更新 closedByPeer \ closed
@@ -77,93 +75,44 @@ public class IOEventHandler implements EventHandler {
      */
     final Queue<BufferFuturePair> buffersToWrite = new ConcurrentLinkedDeque<>();
 
-    InboundPipelineInvocation inboundInvocation;
+    IOPipelineChain ioChain;
 
-    OutboundInvocation outboundInvocation;
+    ChannelEventNotifier eventNotifier;
 
-    Runnable connectedNotifier;
-
-    Runnable readCompletedNotifier;
-
-    Runnable closedNotifier;
-
-    public IOEventHandler(NioEventLoop eventLoop, SocketChannel channel, SelectionKey key, ChannelHandlerConfigurer configurer) {
+    public IOEventHandler(NioEventLoop eventLoop, SocketChannel channel, SelectionKey key, ChannelConfigurationProvider configProvider) {
         this.eventLoop = eventLoop;
         this.channel = channel;
         this.key = key;
-        init(configurer);
+
+        channelWrapper = new NioSocketChannel(channel);
+
+        var configuration = configProvider.configuration(channelWrapper);
+        init(configuration);
     }
 
-    private void init(ChannelHandlerConfigurer configurer) {
-        lettyConf = configurer.lettyConf();
-        bufferPool = configurer.bufferPool();
+    private void init(ChannelConfiguration configuration) {
+        lettyConf = configuration.lettyConf();
+        bufferPool = configuration.bufferPool();
 
         //executor
-        EventExecutorGroup<?> executorGroup = configurer.executorGroup();
-        if (eventLoop.group() == executorGroup) {
+        EventExecutorGroup<?> handlerExecutorGroup = configuration.handlerExecutor();
+        if (eventLoop.group() == handlerExecutorGroup) {
             executor = eventLoop;
         } else {
-            executor = executorGroup.next();
+            executor = handlerExecutorGroup.next();
         }
 
         //context
-        context = new ChannelContext() {
+        context = buildContext();
 
-            @NotNull
-            @Override
-            public RecyclableByteBuffer allocateBuffer(int capacity) {
-                return bufferPool.take(capacity);
-            }
+        var inboundPipelines = configuration.inboundHandlers();
+        var outboundPipelines = configuration.outboundHandlers();
 
-            @NotNull
-            @Override
-            public ListenableFutureTask<Void> close() {
-                return closeFuture;
-            }
+        //init responsibility chain
+        ioChain = new IOPipelineChain(context, inboundPipelines, outboundPipelines, this::write);
 
-            @Override
-            public ListenableFutureTask<Void> write(@NotNull Object data) {
-                var writeFuture = new ListenableFutureTask<Void>(null);
-                outboundInvocation.invoke(data, writeFuture);
-                return writeFuture;
-            }
-        };
-
-        //pipeline
-        List<InboundChannelHandler> inboundPipelines = configurer.inboundHandlers();
-        List<OutboundChannelHandler> outboundPipelines = configurer.outboundHandlers();
-
-        inboundInvocation = InboundPipelineInvocation.buildInvocationChain(
-                context, inboundPipelines);
-
-        outboundInvocation = OutboundInvocation.buildInvocationChain(
-                context, outboundPipelines, this::write);
-
-        //observers
-        Set<ChannelObserver> observers = Stream.concat(inboundPipelines.stream(), outboundPipelines.stream())
-                .collect(Collectors.toSet());  //去重,主要是针对同时实现了 inbound、outbound 接口的 handler
-
-        connectedNotifier = buildNotifier(observers, (ob) -> ob.onConnected(context));
-        readCompletedNotifier = buildNotifier(observers, (ob) -> ob.onReadCompleted(context));
-        closedNotifier = buildNotifier(observers, (ob) -> ob.onClosed(context));
-    }
-
-    private Runnable buildNotifier(Set<ChannelObserver> observers, Consumer<ChannelObserver> handle) {
-        //TODO
-        //1. Skip 注解, 未重写的观察者跳过不通知 + 去重
-        //2. 异常捕获,避免一个观察者的bug导致其他观察者无法被通知
-        return new Runnable() {
-            @Override
-            public void run() {
-                for (ChannelObserver observer : observers) {
-                     if (executor.inEventLoop()) {
-                        handle.accept(observer);
-                    } else {
-                        executor.execute(() -> handle.accept(observer));
-                    }
-                }
-            }
-        };
+        //init observer
+        eventNotifier = new ChannelEventNotifier(inboundPipelines, outboundPipelines);
     }
 
     @SneakyThrows
@@ -185,7 +134,7 @@ public class IOEventHandler implements EventHandler {
         key.interestOps(SelectionKey.OP_READ);
 
         connectedFuture.run();
-        connectedNotifier.run();
+        eventNotifier.onConnected(context);
     }
 
     private void processReadableEvent() throws IOException {
@@ -194,9 +143,9 @@ public class IOEventHandler implements EventHandler {
             RecyclableByteBuffer buf = bufferPool.take(lettyConf.readBufSize());
             n = buf.readFromChannel(channel);
             if (executor.inEventLoop()) {
-                inboundInvocation.invoke(buf);
+                ioChain.input(buf);
             } else {
-                executor.execute(() -> inboundInvocation.invoke(buf));
+                executor.execute(() -> ioChain.input(buf));
             }
         } while (n > 0);
         if (n == -1) {
@@ -287,6 +236,29 @@ public class IOEventHandler implements EventHandler {
                 log.debug("Pending buffer has been tidy, remove interest to writeable event.");
             }
         }
+    }
+
+    @NotNull
+    private ChannelContext buildContext() {
+        return new ChannelContext() {
+
+            @NotNull
+            @Override
+            public RecyclableByteBuffer allocateBuffer(int capacity) {
+                return bufferPool.take(capacity);
+            }
+
+            @NotNull
+            @Override
+            public ListenableFutureTask<Void> close() {
+                return closedFuture;
+            }
+
+            @Override
+            public ListenableFutureTask<Void> write(@NotNull Object data) {
+                return ioChain.output(data);
+            }
+        };
     }
 
     private record BufferFuturePair(RingByteBuffer buffer, ListenableFutureTask<Void> future) {

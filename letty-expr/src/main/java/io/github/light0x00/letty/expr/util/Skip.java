@@ -1,4 +1,4 @@
-package io.github.light0x00.letty.expr;
+package io.github.light0x00.letty.expr.util;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

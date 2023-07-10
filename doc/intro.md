@@ -1,0 +1,13 @@
+- 整体流程(基于流程图介绍)
+- event loop 设计
+  - 线程池改造
+  - event loop group 负载均衡
+  - listenable future task 异步化
+- 缓存池设计
+  - LRU
+  - RingBuffer
+  - release 机制(读写锁解决并发问题)
+- ChannelHandler 设计(责任链、观察者、写缓冲队列)
+  - OutboundPipeline 中执行 write操作, 如何避免死循环问题.
+- 边界情况处理
+    - 连接关闭,半开连接(一方关闭)

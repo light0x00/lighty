@@ -1,7 +1,7 @@
 package io.github.light0x00.letty.expr.eventloop;
 
-import io.github.light0x00.letty.expr.ListenableFutureTask;
-import io.github.light0x00.letty.expr.RejectedExecutionHandler;
+import io.github.light0x00.letty.expr.concurrent.ListenableFutureTask;
+import io.github.light0x00.letty.expr.concurrent.RejectedExecutionHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;

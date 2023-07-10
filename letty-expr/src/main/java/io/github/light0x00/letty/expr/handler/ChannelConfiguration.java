@@ -1,16 +1,17 @@
 package io.github.light0x00.letty.expr.handler;
 
-import io.github.light0x00.letty.expr.LettyConf;
+import io.github.light0x00.letty.expr.LettyConfig;
 import io.github.light0x00.letty.expr.buffer.BufferPool;
 import io.github.light0x00.letty.expr.eventloop.EventExecutorGroup;
 
+import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public interface ChannelHandlerConfigurer {
+public interface ChannelConfiguration {
 
-    default LettyConf lettyConf() {
-        return new LettyConf() {
+    default LettyConfig lettyConf() {
+        return new LettyConfig() {
             @Override
             public boolean isAllowHalfClosure() {
                 return false;
@@ -27,10 +28,13 @@ public interface ChannelHandlerConfigurer {
         return new BufferPool(ByteBuffer::allocateDirect);
     }
 
-    EventExecutorGroup<?> executorGroup();
+    @Nonnull
+    EventExecutorGroup<?> handlerExecutor();
 
+    @Nonnull
     List<InboundChannelHandler> inboundHandlers();
 
+    @Nonnull
     List<OutboundChannelHandler> outboundHandlers();
 
 }

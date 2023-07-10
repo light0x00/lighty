@@ -1,8 +1,9 @@
 package io.github.light0x00.letty.expr;
 
+import io.github.light0x00.letty.expr.concurrent.FutureListener;
+import io.github.light0x00.letty.expr.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoop;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoopGroup;
-import io.github.light0x00.letty.expr.handler.ChannelHandlerConfigurer;
 import io.github.light0x00.letty.expr.handler.IOEventHandler;
 import lombok.SneakyThrows;
 
@@ -18,11 +19,11 @@ public class Client {
 
     final NioEventLoopGroup group;
 
-    ChannelHandlerConfigurer handlerConfigurer;
+    ChannelConfigurationProvider channelConfigurationProvider;
 
-    public Client(NioEventLoopGroup group, ChannelHandlerConfigurer handlerConfigurer) {
+    public Client(NioEventLoopGroup group, ChannelConfigurationProvider initializer) {
         this.group = group;
-        this.handlerConfigurer = handlerConfigurer;
+        this.channelConfigurationProvider = initializer;
     }
 
     @SneakyThrows
@@ -35,7 +36,7 @@ public class Client {
         NioEventLoop eventLoop = group.next();
         eventLoop.register(channel, SelectionKey.OP_CONNECT,
                         key -> {
-                            IOEventHandler eventHandler = new IOEventHandler(eventLoop, channel, key, handlerConfigurer);
+                            IOEventHandler eventHandler = new IOEventHandler(eventLoop, channel, key, channelConfigurationProvider);
                             eventHandler.connectedFuture().addListener((f) -> connectedFuture.run());
                             return eventHandler;
                         })

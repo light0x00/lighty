@@ -1,14 +1,11 @@
 package io.github.light0x00.letty.expr.eventloop;
 
-import io.github.light0x00.letty.expr.eventloop.EventExecutorGroup;
-import io.github.light0x00.letty.expr.eventloop.NioEventLoop;
-import io.github.light0x00.letty.expr.eventloop.SingleThreadPerTaskExecutor;
-import io.github.light0x00.letty.expr.toolkit.Chooser;
+import io.github.light0x00.letty.expr.util.Chooser;
 import lombok.SneakyThrows;
 
 import java.util.concurrent.Executor;
 
-import static io.github.light0x00.letty.expr.toolkit.Chooser.newChooser;
+import static io.github.light0x00.letty.expr.util.Chooser.newChooser;
 
 /**
  * @author light0x00

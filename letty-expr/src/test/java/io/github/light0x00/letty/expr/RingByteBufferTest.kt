@@ -1,6 +1,7 @@
 package io.github.light0x00.letty.expr
 
-import io.github.light0x00.letty.expr.toolkit.Tool
+import io.github.light0x00.letty.expr.buffer.RingByteBuffer
+import io.github.light0x00.letty.expr.util.Tool
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.nio.BufferOverflowException

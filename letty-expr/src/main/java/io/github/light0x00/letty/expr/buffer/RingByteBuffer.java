@@ -1,6 +1,6 @@
-package io.github.light0x00.letty.expr;
+package io.github.light0x00.letty.expr.buffer;
 
-import io.github.light0x00.letty.expr.toolkit.Tool;
+import io.github.light0x00.letty.expr.util.Tool;
 import lombok.Getter;
 
 import javax.annotation.Nonnull;
@@ -154,7 +154,6 @@ public class RingByteBuffer {
             buffer.put(writePosition, src, offset, length);
         }
         moveWriteOffset(length);
-//        bytesUnRead += length;
         return this;
     }
 

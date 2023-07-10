@@ -1,6 +1,6 @@
 package io.github.light0x00.letty.expr.eventloop;
 
-import io.github.light0x00.letty.expr.toolkit.Chooser;
+import io.github.light0x00.letty.expr.util.Chooser;
 
 import java.util.concurrent.Executor;
 

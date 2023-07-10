@@ -1,9 +1,10 @@
 package io.github.light0x00.letty.expr;
 
 
+import io.github.light0x00.letty.expr.concurrent.FutureListener;
+import io.github.light0x00.letty.expr.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoopGroup;
 import io.github.light0x00.letty.expr.handler.Acceptor;
-import io.github.light0x00.letty.expr.handler.ChannelHandlerConfigurer;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,20 +24,20 @@ public class Server {
 
     final NioEventLoopGroup child;
 
-    final ChannelHandlerConfigurer channelHandlerConfigurer;
+    final ChannelConfigurationProvider configProvider;
 
     final Acceptor acceptor;
 
-    public Server(NioEventLoopGroup group, ChannelHandlerConfigurer messageHandler) {
+    public Server(NioEventLoopGroup group, ChannelConfigurationProvider messageHandler) {
         this(group, group, messageHandler);
     }
 
-    public Server(NioEventLoopGroup parent, NioEventLoopGroup child, ChannelHandlerConfigurer channelHandlerConfigurer) {
+    public Server(NioEventLoopGroup parent, NioEventLoopGroup child, ChannelConfigurationProvider configProvider) {
         this.parent = parent;
         this.child = child;
-        this.channelHandlerConfigurer = channelHandlerConfigurer;
+        this.configProvider = configProvider;
 
-        acceptor = new Acceptor(child, channelHandlerConfigurer);
+        acceptor = new Acceptor(child, configProvider);
     }
 
     @SneakyThrows

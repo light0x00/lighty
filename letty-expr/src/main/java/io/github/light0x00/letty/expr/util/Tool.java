@@ -1,4 +1,8 @@
-package io.github.light0x00.letty.expr.toolkit;
+package io.github.light0x00.letty.expr.util;
+
+import lombok.SneakyThrows;
+
+import java.lang.annotation.Annotation;
 
 /**
  * @author light0x00
@@ -29,4 +33,8 @@ public class Tool {
     }
 
 
+    @SneakyThrows
+    public static boolean existAnnotation(Class<? extends Annotation> annotationClass, Class<?> clazz, String methodName, Class<?>... parameterTypes) {
+        return clazz.getMethod(methodName, parameterTypes).isAnnotationPresent(annotationClass);
+    }
 }

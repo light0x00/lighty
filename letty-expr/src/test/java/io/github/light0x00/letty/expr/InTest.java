@@ -1,13 +1,15 @@
 package io.github.light0x00.letty.expr;
 
+import io.github.light0x00.letty.expr.concurrent.ListenableFutureTask;
+import io.github.light0x00.letty.expr.handler.ChannelContext;
 import io.github.light0x00.letty.expr.eventloop.EventExecutor;
 import io.github.light0x00.letty.expr.eventloop.EventExecutorGroup;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoopGroup;
-import io.github.light0x00.letty.expr.handler.ChannelHandlerConfigurer;
+import io.github.light0x00.letty.expr.handler.ChannelConfiguration;
 import io.github.light0x00.letty.expr.handler.InboundChannelHandler;
 import io.github.light0x00.letty.expr.handler.InboundPipeline;
 import io.github.light0x00.letty.expr.handler.OutboundChannelHandler;
-import io.github.light0x00.letty.expr.handler.adapter.InboundChannelHandlerAdapter;
+import io.github.light0x00.letty.expr.handler.adapter.ChannelHandlerAdapter;
 import io.github.light0x00.letty.expr.handler.adapter.InboundChannelHandlerAdapter;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +48,7 @@ public class InTest {
 
             NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, executorService);
 
-            Server server = new Server(eventLoopGroup, new TestServerMessageHandler(eventLoopGroup));
+            Server server = new Server(eventLoopGroup, channel -> new TestServerMessage(eventLoopGroup));
 
             server.bind(new InetSocketAddress("127.0.0.1", 9001))
                     .addListener((f) -> {
@@ -60,7 +62,9 @@ public class InTest {
             ExecutorService executorService = Executors.newFixedThreadPool(2, new IdentifierThreadFactory("client"));
             NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, executorService);
 
-            Client client = new Client(eventLoopGroup, new TestClientMessageHandler(eventLoopGroup));
+            Client client = new Client(eventLoopGroup,
+                    channel -> new TestClientMessage(eventLoopGroup)
+            );
 
             client.connect(new InetSocketAddress("127.0.0.1", 9001));
         }
@@ -83,12 +87,12 @@ public class InTest {
     }
 
     @AllArgsConstructor
-    static class TestClientMessageHandler implements ChannelHandlerConfigurer {
+    static class TestClientMessage implements ChannelConfiguration {
 
         EventExecutorGroup<? extends EventExecutor> executor;
 
         @Override
-        public EventExecutorGroup<?> executorGroup() {
+        public EventExecutorGroup<?> handlerExecutor() {
             return executor;
         }
 
@@ -97,7 +101,7 @@ public class InTest {
             return
                     Arrays.asList(
                             new UTF32Decoder(),
-                            new InboundChannelHandlerAdapter(){
+                            new InboundChannelHandlerAdapter() {
 
                                 @Override
                                 public void onConnected(ChannelContext context) {
@@ -106,7 +110,7 @@ public class InTest {
 
                                 @Override
                                 public void onRead(ChannelContext context, Object data, InboundPipeline next) {
-                                    log.info("onRead: {}",data);
+                                    log.info("onRead: {}", data);
                                 }
                             }
                     );
@@ -115,31 +119,37 @@ public class InTest {
         @Override
         public List<OutboundChannelHandler> outboundHandlers() {
             return Arrays.asList(
-                   new UTF32Encoder()
+                    new UTF32Encoder()
             );
         }
-
     }
 
-    static class TestServerMessageHandler implements ChannelHandlerConfigurer {
+    static class TestServerMessage implements ChannelConfiguration {
         EventExecutorGroup<? extends EventExecutor> executor;
 
-        public TestServerMessageHandler(EventExecutorGroup<? extends EventExecutor> executor) {
+        public TestServerMessage(EventExecutorGroup<? extends EventExecutor> executor) {
             this.executor = executor;
         }
 
         @Override
-        public EventExecutorGroup<?> executorGroup() {
+        public EventExecutorGroup<?> handlerExecutor() {
             return executor;
         }
 
         @Override
         public List<InboundChannelHandler> inboundHandlers() {
             return Arrays.asList(
-                    new InboundChannelHandlerAdapter() {
+                    new UTF32Decoder(),
+                    new ChannelHandlerAdapter() {
+
                         @Override
                         public void onConnected(ChannelContext context) {
                             context.write("hello world");
+                        }
+
+                        @Override
+                        public void onRead(ChannelContext context, Object data, InboundPipeline next) {
+                            log.info("onRead: {}", data);
                         }
                     }
             );

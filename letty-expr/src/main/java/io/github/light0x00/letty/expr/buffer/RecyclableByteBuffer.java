@@ -1,7 +1,5 @@
 package io.github.light0x00.letty.expr.buffer;
 
-import io.github.light0x00.letty.expr.RingByteBuffer;
-
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -14,8 +12,6 @@ public class RecyclableByteBuffer extends RingByteBuffer {
 
     private final AtomicBoolean recycled = new AtomicBoolean();
 
-
-    @SuppressWarnings("unchecked")
     public RecyclableByteBuffer(ByteBuffer originalBuffer, int offset, int length, BufferPool bufferPool) {
         this(originalBuffer, originalBuffer.slice(offset, length), bufferPool);
     }

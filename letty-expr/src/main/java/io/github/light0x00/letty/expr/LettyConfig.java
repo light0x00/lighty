@@ -1,6 +1,6 @@
 package io.github.light0x00.letty.expr;
 
-public interface LettyConf {
+public interface LettyConfig {
 
     /**
      * Returns {@code true} if and only if the channel should not close itself when its remote

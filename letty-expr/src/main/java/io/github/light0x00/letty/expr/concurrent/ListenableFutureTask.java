@@ -1,4 +1,4 @@
-package io.github.light0x00.letty.expr;
+package io.github.light0x00.letty.expr.concurrent;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -13,7 +13,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author light0x00
