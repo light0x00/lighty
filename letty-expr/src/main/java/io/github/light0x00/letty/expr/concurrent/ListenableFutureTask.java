@@ -8,10 +8,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -63,6 +60,16 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
     @SneakyThrows   // we don't need the fucking checked exception, so here make it implicit. ^ ^
     public T get() {
         return super.get();
+    }
+
+    @Override
+    public void set(T t) {
+        super.set(t);
+    }
+
+    @Override
+    public void setException(Throwable t) {
+        super.setException(t);
     }
 
     public boolean isSuccess() {
@@ -128,5 +135,22 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
 
     private record ListenerExecutorPair<T>(FutureListener<T> listener, @Nullable Executor executor) {
 
+    }
+
+    public static <T> ListenableFutureTask<List<ListenableFutureTask<T>>> all(List<ListenableFutureTask<T>> tasks) {
+        ListenableFutureTask<List<ListenableFutureTask<T>>> listenableFutureTask = new ListenableFutureTask<>(
+                () -> tasks, null);
+
+        CountDownLatch countDownLatch = new CountDownLatch(tasks.size());
+        for (ListenableFutureTask<?> task : tasks) {
+            task.addListener((f) -> {
+                countDownLatch.countDown();
+                if (countDownLatch.getCount() == 0) {
+                    listenableFutureTask.run();
+                }
+            });
+        }
+
+        return listenableFutureTask;
     }
 }

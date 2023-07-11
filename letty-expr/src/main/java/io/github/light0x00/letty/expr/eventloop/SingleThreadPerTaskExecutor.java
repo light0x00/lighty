@@ -1,17 +1,22 @@
 package io.github.light0x00.letty.expr.eventloop;
 
+import lombok.AllArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * @author light0x00
  * @since 2023/6/27
  */
+@AllArgsConstructor
 public class SingleThreadPerTaskExecutor implements Executor {
+
+    private ThreadFactory threadFactory;
 
     @Override
     public void execute(@NotNull Runnable command) {
-        new Thread(command).start();
+        threadFactory.newThread(command).start();
     }
 }

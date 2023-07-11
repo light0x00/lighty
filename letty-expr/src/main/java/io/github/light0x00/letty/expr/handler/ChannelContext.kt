@@ -19,4 +19,5 @@ interface ChannelContext {
 
     abstract fun allocateBuffer(capacity: Int): RecyclableByteBuffer
 
+    abstract fun shutdownOutput(): ListenableFutureTask<Void>
 }

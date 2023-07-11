@@ -2,7 +2,7 @@ package io.github.light0x00.letty.expr.handler;
 
 import io.github.light0x00.letty.expr.LettyConfig;
 import io.github.light0x00.letty.expr.buffer.BufferPool;
-import io.github.light0x00.letty.expr.eventloop.EventExecutorGroup;
+import io.github.light0x00.letty.expr.eventloop.EventLoopGroup;
 
 import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
@@ -29,7 +29,7 @@ public interface ChannelConfiguration {
     }
 
     @Nonnull
-    EventExecutorGroup<?> handlerExecutor();
+    EventLoopGroup<?> handlerExecutor();
 
     @Nonnull
     List<InboundChannelHandler> inboundHandlers();

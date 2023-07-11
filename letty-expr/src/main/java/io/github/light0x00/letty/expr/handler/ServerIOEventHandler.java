@@ -17,6 +17,12 @@ import java.nio.channels.SocketChannel;
 public class ServerIOEventHandler extends IOEventHandler {
     public ServerIOEventHandler(NioEventLoop eventLoop, SocketChannel channel, SelectionKey key, ChannelConfigurationProvider configurer) {
         super(eventLoop, channel, key, configurer);
+
+        processAcceptableEvent();
+    }
+
+    private void processAcceptableEvent() {
         eventNotifier.onConnected(context);
+        connectedFuture.run();
     }
 }

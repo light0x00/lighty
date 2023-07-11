@@ -1,8 +1,8 @@
 package io.github.light0x00.letty.core.concurrent;
 
 import lombok.AllArgsConstructor;
-import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nonnull;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
@@ -14,7 +14,7 @@ import java.util.concurrent.ThreadFactory;
 public class SingleThreadPerTaskExecutor implements Executor {
     private final ThreadFactory threadFactory;
     @Override
-    public void execute(@NotNull Runnable command) {
+    public void execute(@Nonnull Runnable command) {
         threadFactory.newThread(command).start();
     }
 }

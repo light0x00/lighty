@@ -1,9 +1,10 @@
-package io.github.light0x00.letty.expr;
+package io.github.light0x00.letty.expr.examples;
 
+import io.github.light0x00.letty.expr.*;
 import io.github.light0x00.letty.expr.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.expr.handler.ChannelContext;
-import io.github.light0x00.letty.expr.eventloop.EventExecutor;
-import io.github.light0x00.letty.expr.eventloop.EventExecutorGroup;
+import io.github.light0x00.letty.expr.eventloop.EventLoop;
+import io.github.light0x00.letty.expr.eventloop.EventLoopGroup;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoopGroup;
 import io.github.light0x00.letty.expr.handler.ChannelConfiguration;
 import io.github.light0x00.letty.expr.handler.InboundChannelHandler;
@@ -19,8 +20,6 @@ import javax.annotation.Nonnull;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,38 +28,28 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @since 2023/6/29
  */
 @Slf4j
-public class InTest {
-
-    @Test
-    public void test() {
-        ListenableFutureTask<Void> fu = new ListenableFutureTask<Void>(null);
-
-        fu.cancel(true);
-
-        System.out.println(fu.isDone());
-
-    }
+public class UTF32ServerClientTest {
 
     public static class ServerSide {
         public static void main(String[] args) {
 
-            ExecutorService executorService = Executors.newFixedThreadPool(2, new IdentifierThreadFactory("server"));
-
-            NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, executorService);
+            NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("server"));
 
             Server server = new Server(eventLoopGroup, channel -> new TestServerMessage(eventLoopGroup));
 
             server.bind(new InetSocketAddress("127.0.0.1", 9001))
                     .addListener((f) -> {
                         log.info("server started!");
+                        NioServerSocketChannel ch = f.get();
+                        log.info(ch.getLocalAddress().toString());
                     });
+
         }
     }
 
     public static class ClientSide {
         public static void main(String[] args) {
-            ExecutorService executorService = Executors.newFixedThreadPool(2, new IdentifierThreadFactory("client"));
-            NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, executorService);
+            NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("client"));
 
             Client client = new Client(eventLoopGroup,
                     channel -> new TestClientMessage(eventLoopGroup)
@@ -89,10 +78,10 @@ public class InTest {
     @AllArgsConstructor
     static class TestClientMessage implements ChannelConfiguration {
 
-        EventExecutorGroup<? extends EventExecutor> executor;
+        EventLoopGroup<? extends EventLoop> executor;
 
         @Override
-        public EventExecutorGroup<?> handlerExecutor() {
+        public EventLoopGroup<?> handlerExecutor() {
             return executor;
         }
 
@@ -125,14 +114,14 @@ public class InTest {
     }
 
     static class TestServerMessage implements ChannelConfiguration {
-        EventExecutorGroup<? extends EventExecutor> executor;
+        EventLoopGroup<? extends EventLoop> executor;
 
-        public TestServerMessage(EventExecutorGroup<? extends EventExecutor> executor) {
+        public TestServerMessage(EventLoopGroup<? extends EventLoop> executor) {
             this.executor = executor;
         }
 
         @Override
-        public EventExecutorGroup<?> handlerExecutor() {
+        public EventLoopGroup<?> handlerExecutor() {
             return executor;
         }
 
@@ -145,6 +134,7 @@ public class InTest {
                         @Override
                         public void onConnected(ChannelContext context) {
                             context.write("hello world");
+                            context.close();
                         }
 
                         @Override

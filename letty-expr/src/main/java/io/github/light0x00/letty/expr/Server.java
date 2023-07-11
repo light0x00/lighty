@@ -3,6 +3,7 @@ package io.github.light0x00.letty.expr;
 
 import io.github.light0x00.letty.expr.concurrent.FutureListener;
 import io.github.light0x00.letty.expr.concurrent.ListenableFutureTask;
+import io.github.light0x00.letty.expr.eventloop.NioEventLoop;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoopGroup;
 import io.github.light0x00.letty.expr.handler.Acceptor;
 import lombok.SneakyThrows;
@@ -41,27 +42,26 @@ public class Server {
     }
 
     @SneakyThrows
-    public ListenableFutureTask<Void> bind(SocketAddress address) {
+    public ListenableFutureTask<NioServerSocketChannel> bind(SocketAddress address) {
         ServerSocketChannel ssc = ServerSocketChannel.open(StandardProtocolFamily.INET);
         ssc.configureBlocking(false);
 
-        var bindFuture = new ListenableFutureTask<Void>(null);
+        var bindFuture = new ListenableFutureTask<NioServerSocketChannel>(null);
 
-        parent.next().register(ssc, SelectionKey.OP_ACCEPT, acceptor)
+        NioEventLoop eventLoop = parent.next();
+        eventLoop.register(ssc, SelectionKey.OP_ACCEPT, acceptor)
                 .addListener(new FutureListener<SelectionKey>() {
                     @SneakyThrows
                     @Override
                     public void operationComplete(ListenableFutureTask<SelectionKey> futureTask) {
                         ssc.bind(address);
                         log.debug("Listen on " + address);
-                        bindFuture.run();
+
+                        SelectionKey key = futureTask.get();
+                        bindFuture.set(new NioServerSocketChannel(ssc, key, eventLoop));
                     }
                 });
         return bindFuture;
-    }
-
-    public void shutdown() {
-
     }
 
 }

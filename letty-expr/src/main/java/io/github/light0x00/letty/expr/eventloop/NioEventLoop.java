@@ -7,8 +7,10 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketException;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -18,7 +20,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -26,24 +28,33 @@ import java.util.function.Function;
  * @since 2023/6/16
  */
 @Slf4j
-public class NioEventLoop implements EventExecutor {
+public class NioEventLoop implements EventLoop {
+
+    private static final int NOT_STARTED = 0;
+    private static final int STARTED = 1;
+    private static final int TERMINATED = 2;
 
     private final Queue<Runnable> tasks = new ConcurrentLinkedDeque<>();
 
-    private final Selector selector = Selector.open();
+    private final Selector selector;
 
     private final Executor executor;
 
-    private final AtomicBoolean started = new AtomicBoolean();
+    private final AtomicInteger state = new AtomicInteger();
 
     private volatile Thread workerThread;
 
     @Getter
-    private EventExecutorGroup<NioEventLoop> group;
+    private final EventLoopGroup<NioEventLoop> group;
 
-    public NioEventLoop(Executor executor, EventExecutorGroup<NioEventLoop> group) throws IOException {
+    @Getter
+    private final ListenableFutureTask<Void> shutdownFuture = new ListenableFutureTask<>(null);
+
+    @SneakyThrows
+    public NioEventLoop(Executor executor, EventLoopGroup<NioEventLoop> group) {
         this.executor = executor;
         this.group = group;
+        selector = Selector.open();
     }
 
     public void addTask(Runnable runnable, boolean wakeup) {
@@ -61,7 +72,7 @@ public class NioEventLoop implements EventExecutor {
         }
     }
 
-    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, @Nullable EventHandler handler) {
+    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, EventHandler handler) {
         return register(channel, interestOps, (k) -> handler);
     }
 
@@ -90,18 +101,26 @@ public class NioEventLoop implements EventExecutor {
     }
 
     private void startup() {
-        if (!started.get() && started.compareAndSet(false, true)) {
+        if (state.compareAndSet(NOT_STARTED, STARTED)) {
             executor.execute(this::run);
         }
     }
 
-    public void shutdown() {
-        if (started.get()) {
+    @Override
+    public ListenableFutureTask<Void> shutdown() {
+        if (state.compareAndSet(NOT_STARTED, TERMINATED)) {
+            onTerminated();
+        } else if (state.compareAndSet(STARTED, TERMINATED)) {
+            //状态为 started 和 worker 开始运行之间存在时间差,
+            //所以这里短暂自旋,等待 workerThread 被赋值
             while (workerThread == null) {
                 Thread.onSpinWait();
             }
             workerThread.interrupt();
+        } else {
+            //这种情况说明已经被 shutdown 了
         }
+        return shutdownFuture;
     }
 
     @SneakyThrows
@@ -116,19 +135,27 @@ public class NioEventLoop implements EventExecutor {
             Set<SelectionKey> events = selector.selectedKeys();
             Iterator<SelectionKey> it = events.iterator();
             while (it.hasNext()) {
-                SelectionKey event = it.next();
-                var eventHandler = (EventHandler) event.attachment();
+                SelectionKey key = it.next();
+                var eventHandler = (EventHandler) key.attachment();
                 try {
-                    eventHandler.onEvent(event);
+                    eventHandler.onEvent(key);
                 } catch (Throwable th) {
                     log.error("Error occurred while process event", th); //TODO 交给异常捕获
-                    //socket interestSet readySet 都是有状态的, 原则上只要处理时出现未处理异常,就应当 fail-fast, 避免基于错误的状态继续.
-                    event.cancel();
-                    event.channel().close();
+                    if (th instanceof IOException) {
+                        key.cancel();
+                        key.channel().close();
+                    }
                 }
                 it.remove();
             }
         }
+        onTerminated();
+    }
+
+    @SneakyThrows
+    private void onTerminated() {
+        selector.close();
+        shutdownFuture.run();
     }
 
     private void safeExecute(Runnable r) {

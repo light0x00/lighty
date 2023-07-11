@@ -8,4 +8,7 @@
   - 对用户不区分 inboundHandler、outboundHandler , 内部再区分, 
   - 比如设置 socket 的属性
   - ChannelInitializer 的方式传入 channel 配置 
-- 责任链调用、观察者通知 支持按1对1指定 executor
+- [ ] 责任链调用、观察者通知 支持按1对1指定 executor
+- [ ] ListenableFutureTask 需要拆分为接口和实现 ,为避免目前 `run` 方法暴露给用户,返回给用户的应为受限的代理对象,用户调用该对象的 `run` 将抛出异常  
+- [ ] Outbound Buffer 分离为单独组件, 内部统计字节数量
+- [ ] 对比 close、shutdownInput、shutdownOutput 在 TCP 层面的区别

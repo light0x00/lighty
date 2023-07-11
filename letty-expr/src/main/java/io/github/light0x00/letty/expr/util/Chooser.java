@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public interface Chooser<T> {
     T next();
 
-    public static <T> Chooser<T> newChooser(T[] executors) {
+    static <T> Chooser<T> newChooser(T[] executors) {
         if (isPowerOfTwo(executors.length)) {
             return new PowerOfTwoChooser<>(executors);
         } else {
