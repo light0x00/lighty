@@ -68,14 +68,37 @@ public class IOEventHandler implements EventHandler {
     ListenableFutureTask<Void> closedFuture = new ListenableFutureTask<>(null);
 
     /**
-     * NIO 线程 {@link #processReadableEvent()} 更新 closedByPeer \ closed
-     * <p>
-     * 事件线程 {@link #close()} 执行清除
-     * 用户线程 {@link #write(Object, ListenableFutureTask)} 执行添加
-     * 事件线程 {@link #processWritableEvent()} 执行 poll
+     * 目前存在的竞争条件:
+     *
+     * 事件线程/用户线程 {@link #shutdownOutput()} 执行:
+     *
+     * <pre>
+     * outboundFIN = true;
+     * clear
+     * </pre>
+     *
+     * 用户线程 {@link #write(Object, ListenableFutureTask)} 执行:
+     *
+     * <pre>
+     * if outboundFIN == false
+     * then offer
+     * </pre>
+     *
+     * 事件线程 {@link #processWritableEvent()} 执行:
+     * <pre>
+     * while(not empty)
+     *      poll
+     * </pre>
+     *
+     * TODO: 可采用读写锁优化
+     * <li> {@link #write(Object, ListenableFutureTask)} {@link #processWritableEvent()} 可以并发执行, 使用读锁
+     * <li> {@link #shutdownOutput()} 需要排他执行,使用写锁
+     *
      */
     @GuardedBy("outboundBuffer")
     final Queue<BufferFuturePair> outboundBuffer = new LinkedList<>();
+
+    final Object outboundLock = new Object();
 
     IOPipelineChain ioChain;
 
@@ -150,11 +173,11 @@ public class IOEventHandler implements EventHandler {
                 executor.execute(() -> ioChain.input(buf));
             }
         } while (n > 0);
-        if (n == -1) { //对方调用了 close
+        if (n == -1) {
             log.debug("Received FIN from {}", channel.getRemoteAddress());
+
             inboundFIN = true;
-            //remove read from interestOps
-            key.interestOps(key.interestOps() ^ SelectionKey.OP_READ);
+            key.interestOps(key.interestOps() ^ SelectionKey.OP_READ); //remove read from interestOps
 
             eventNotifier.onReadCompleted(context);
 
@@ -165,7 +188,7 @@ public class IOEventHandler implements EventHandler {
     }
 
     private void processWritableEvent() throws IOException {
-        synchronized (outboundBuffer) {
+        synchronized (outboundLock) {
             for (BufferFuturePair bufFuture; (bufFuture = outboundBuffer.peek()) != null; ) {
 
                 RingByteBuffer buf = bufFuture.buffer();
@@ -197,7 +220,7 @@ public class IOEventHandler implements EventHandler {
         if (!(data instanceof RingByteBuffer buf)) {
             throw new ClassCastException("Unsupported data type to write:" + data.getClass());
         }
-        synchronized (outboundBuffer) {
+        synchronized (outboundLock) {
             if (outboundFIN) {
                 throw new ClosedChannelException();
             }
@@ -212,9 +235,15 @@ public class IOEventHandler implements EventHandler {
     }
 
     @SneakyThrows
-    private void close()  {
-        synchronized (outboundBuffer) {
+    private void shutdownInput() {
+        channel.shutdownInput();
+    }
+
+    @SneakyThrows
+    private void shutdownOutput() {
+        synchronized (outboundLock) {
             outboundFIN = true;
+            key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
 
             log.debug("Outbound buffer remaining:{}", outboundBuffer.size());
 
@@ -223,11 +252,16 @@ public class IOEventHandler implements EventHandler {
             }
 
             log.debug("Send FIN to {}", channel.getRemoteAddress());
-
-            channel.close();
-            key.cancel();
         }
+    }
 
+    @SneakyThrows
+    private void close() {
+
+        shutdownOutput();
+
+        channel.close();
+        key.cancel();
 
         eventNotifier.onClosed(context);
         closedFuture.run();
@@ -239,8 +273,14 @@ public class IOEventHandler implements EventHandler {
 
             @NotNull
             @Override
+            public ListenableFutureTask<Void> shutdownInput() {
+                return eventLoop.submit(IOEventHandler.this::shutdownInput);
+            }
+
+            @NotNull
+            @Override
             public ListenableFutureTask<Void> shutdownOutput() {
-                return null;
+                return eventLoop.submit(IOEventHandler.this::shutdownOutput);
             }
 
             @NotNull

@@ -58,7 +58,7 @@ public class Server {
                         log.debug("Listen on " + address);
 
                         SelectionKey key = futureTask.get();
-                        bindFuture.set(new NioServerSocketChannel(ssc, key, eventLoop));
+                        bindFuture.setSuccess(new NioServerSocketChannel(ssc, key, eventLoop));
                     }
                 });
         return bindFuture;

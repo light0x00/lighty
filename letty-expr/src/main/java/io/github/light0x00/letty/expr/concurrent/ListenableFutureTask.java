@@ -62,13 +62,15 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
         return super.get();
     }
 
-    @Override
-    public void set(T t) {
+    public void setSuccess() {
+        setSuccess(null);
+    }
+
+    public void setSuccess(T t) {
         super.set(t);
     }
 
-    @Override
-    public void setException(Throwable t) {
+    public void setFailure(Throwable t) {
         super.setException(t);
     }
 

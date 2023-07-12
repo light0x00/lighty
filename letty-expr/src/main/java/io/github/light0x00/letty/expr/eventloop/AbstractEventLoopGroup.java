@@ -53,7 +53,8 @@ public abstract class AbstractEventLoopGroup<T extends EventLoop> implements Eve
     @Override
     public ListenableFutureTask<Void> shutdown() {
         List<ListenableFutureTask<Void>> shutdownFutures = Arrays.stream(eventLoops)
-                .map(EventLoop::shutdown).collect(Collectors.toList());
+                .map(EventLoop::shutdown)
+                .collect(Collectors.toList());
         ListenableFutureTask.all(shutdownFutures).addListener(f -> {
             List<ListenableFutureTask<Void>> futures = f.get();
             for (ListenableFutureTask<Void> future : futures) {

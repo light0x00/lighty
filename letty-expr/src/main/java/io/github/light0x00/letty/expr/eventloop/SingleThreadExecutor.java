@@ -85,19 +85,6 @@ public class SingleThreadExecutor implements EventLoop {
         this.rejectedExecutionHandler = rejectedExecutionHandler;
     }
 
-    public <T> ListenableFutureTask<T> submit(@Nonnull Callable<T> callable) {
-        return submit0(new ListenableFutureTask<>(callable, this));
-    }
-
-    public ListenableFutureTask<Void> submit(@Nonnull Runnable runnable) {
-        return submit0(new ListenableFutureTask<>(runnable, null));
-    }
-
-    private <T> ListenableFutureTask<T> submit0(@Nonnull ListenableFutureTask<T> future) {
-        execute(future);
-        return future;
-    }
-
     /**
      * 执行一个指定任务,如果因任何原因而导致未被执行,比如达到队列容量上限或已经 shutdown/shutdownNow,该任务被转交给 {@link #rejectedExecutionHandler}
      */

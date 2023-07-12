@@ -8,9 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.SocketException;
-import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;

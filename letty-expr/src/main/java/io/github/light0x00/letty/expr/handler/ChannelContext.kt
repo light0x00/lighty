@@ -13,11 +13,13 @@ import java.nio.channels.SocketChannel
  */
 interface ChannelContext {
 
-    abstract fun write(data: Any): ListenableFutureTask<Void>
+    fun write(data: Any): ListenableFutureTask<Void>
 
-    abstract fun close(): ListenableFutureTask<Void>
+    fun close(): ListenableFutureTask<Void>
 
-    abstract fun allocateBuffer(capacity: Int): RecyclableByteBuffer
+    fun allocateBuffer(capacity: Int): RecyclableByteBuffer
 
-    abstract fun shutdownOutput(): ListenableFutureTask<Void>
+    fun shutdownOutput(): ListenableFutureTask<Void>
+
+    fun shutdownInput(): ListenableFutureTask<Void>
 }
