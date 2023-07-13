@@ -1,4 +1,4 @@
-package io.github.light0x00.letty.expr;
+package io.github.light0x00.letty.expr.examples.utf32;
 
 import io.github.light0x00.letty.expr.buffer.RecyclableByteBuffer;
 import io.github.light0x00.letty.expr.handler.ChannelContext;
@@ -27,15 +27,16 @@ public class UTF32Encoder extends ChannelHandlerAdapter {
 
         log.info("write");
 
-        context.write(buf).addListener(
-                f -> {
-                    if (f.isSuccess()) {
-                        log.info("actual write");
-                    } else {
-                        f.cause().printStackTrace();
-                    }
-                }
-        );
+        context.channel().write(buf)
+                .addListener(
+                        f -> {
+                            if (f.isSuccess()) {
+                                log.info("actual write");
+                            } else {
+                                f.cause().printStackTrace();
+                            }
+                        }
+                );
     }
 
 }

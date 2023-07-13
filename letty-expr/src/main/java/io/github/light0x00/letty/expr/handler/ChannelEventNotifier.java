@@ -1,5 +1,6 @@
 package io.github.light0x00.letty.expr.handler;
 
+import io.github.light0x00.letty.expr.eventloop.EventLoop;
 import io.github.light0x00.letty.expr.util.Skip;
 
 import java.util.List;
@@ -20,7 +21,14 @@ public class ChannelEventNotifier implements ChannelObserver {
     private final List<ChannelObserver> readCompletedEventObservers;
     private final List<ChannelObserver> closedEventObservers;
 
-    public ChannelEventNotifier(List<InboundChannelHandler> inboundPipelines, List<OutboundChannelHandler> outboundPipelines) {
+    EventLoop eventLoop;
+
+    public ChannelEventNotifier(
+            EventLoop eventLoop,
+            List<InboundChannelHandler> inboundPipelines,
+            List<OutboundChannelHandler> outboundPipelines) {
+
+        this.eventLoop = eventLoop;
 
         Set<ChannelObserver> observers = Stream.concat(inboundPipelines.stream(), outboundPipelines.stream())
                 .collect(Collectors.toSet()); //去重,主要是针对同时实现了 inbound、outbound 接口的 handler
@@ -42,32 +50,34 @@ public class ChannelEventNotifier implements ChannelObserver {
     @Override
     public void onConnected(ChannelContext context) {
         for (ChannelObserver connectedEventObserver : connectedEventObservers) {
-            connectedEventObserver.onConnected(context);
+            if (eventLoop.inEventLoop()) {
+                connectedEventObserver.onConnected(context);
+            } else {
+                eventLoop.execute(() -> connectedEventObserver.onConnected(context));
+            }
         }
     }
 
     @Override
     public void onReadCompleted(ChannelContext context) {
         for (ChannelObserver readCompletedEventObserver : readCompletedEventObservers) {
-            readCompletedEventObserver.onReadCompleted(context);
+            if (eventLoop.inEventLoop()) {
+                readCompletedEventObserver.onReadCompleted(context);
+            } else {
+                eventLoop.execute(() -> readCompletedEventObserver.onReadCompleted(context));
+            }
         }
     }
 
     @Override
     public void onClosed(ChannelContext context) {
         for (ChannelObserver closedEventObserver : closedEventObservers) {
-            closedEventObserver.onClosed(context);
+            if (eventLoop.inEventLoop()) {
+                closedEventObserver.onClosed(context);
+            } else {
+                eventLoop.execute(() -> closedEventObserver.onClosed(context));
+            }
         }
     }
-//
-//    @Override
-//    public void onRead(ChannelContext context, Object data, InboundPipeline next) {
-//
-//    }
-//
-//    @Override
-//    public void onWrite(ChannelContext context, Object data, OutboundPipeline next) {
-//
-//    }
 
 }

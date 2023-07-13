@@ -1,7 +1,7 @@
 - 整体流程(基于流程图介绍)
 - event loop 设计
   - 线程池改造
-    - lock free技巧,如 shutdown
+    - lock free技巧,如 shutdown、execute
   - event loop group 负载均衡
   - listenable future task 异步化
 - 缓存池设计

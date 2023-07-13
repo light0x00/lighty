@@ -211,7 +211,9 @@ public class RingByteBuffer {
             ByteBuffer[] buffers = Arrays.stream(list.toArray())
                     .map(Fragment::sliceBuf)
                     .toArray(ByteBuffer[]::new);
-            int n = (int) channel.read(buffers); //不可能超过 int 范围
+            //Impossible to overflow the range of int,
+            //cuz to the buffers are fragments from only one ByteBuffer, which is at most Integer.MAX_VALUE bytes
+            int n = (int) channel.read(buffers);
             moveWriteOffset(n);
             return n;
         }

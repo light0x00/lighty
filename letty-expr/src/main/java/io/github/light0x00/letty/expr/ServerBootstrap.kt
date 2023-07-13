@@ -23,8 +23,7 @@ class ServerBootstrap {
         return this
     }
 
-    fun channelInitializer(channelInitializer: ChannelConfigurationProvider): ServerBootstrap {
-        this.channelInitializer = channelInitializer;
+    fun channelInitializer(): ServerBootstrap {
         return this
     }
 

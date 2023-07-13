@@ -5,6 +5,7 @@ import io.github.light0x00.letty.expr.buffer.BufferPool;
 import io.github.light0x00.letty.expr.eventloop.EventLoopGroup;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -28,8 +29,10 @@ public interface ChannelConfiguration {
         return new BufferPool(ByteBuffer::allocateDirect);
     }
 
-    @Nonnull
-    EventLoopGroup<?> handlerExecutor();
+    @Nullable
+    default EventLoopGroup<?> handlerExecutor(){
+        return null;
+    }
 
     @Nonnull
     List<InboundChannelHandler> inboundHandlers();

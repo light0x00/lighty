@@ -27,7 +27,7 @@ netty 中, 如果一方调用 ctx.close() , 那么这一方的写缓冲区中的
 
 ### 事件循环 shutdown 
 
-事件循环组,将状态
+TODO
 
 清除 selector
 执行完剩余任务
@@ -44,10 +44,4 @@ netty 中, 如果一方调用 ctx.close() , 那么这一方的写缓冲区中的
 
 用户代码导致异常(是否中断事件循环)
 
-```java
-  if ((interestOps & SelectionKey.OP_WRITE) == 0) {
-  key.interestOps(interestOps | SelectionKey.OP_WRITE);
-  }
-  ch.isOpen() && ch.isConnected();
-```
 

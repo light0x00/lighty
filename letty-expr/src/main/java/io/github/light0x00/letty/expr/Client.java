@@ -5,6 +5,7 @@ import io.github.light0x00.letty.expr.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoop;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoopGroup;
 import io.github.light0x00.letty.expr.handler.IOEventHandler;
+import io.github.light0x00.letty.expr.handler.NioSocketChannel;
 import lombok.SneakyThrows;
 
 import java.net.SocketAddress;
@@ -12,6 +13,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 /**
+ * 1. 创建 channel 并将其注册到 {@link NioEventLoop}
+ *
  * @author light0x00
  * @since 2023/6/29
  */
@@ -27,17 +30,18 @@ public class Client {
     }
 
     @SneakyThrows
-    public ListenableFutureTask<Void> connect(SocketAddress address) {
+    public ListenableFutureTask<NioSocketChannel> connect(SocketAddress address) {
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
 
-        var connectedFuture = new ListenableFutureTask<Void>(null);
+        var connectedFuture = new ListenableFutureTask<NioSocketChannel>(null);
 
         NioEventLoop eventLoop = group.next();
         eventLoop.register(channel, SelectionKey.OP_CONNECT,
                         key -> {
                             IOEventHandler eventHandler = new IOEventHandler(eventLoop, channel, key, channelConfigurationProvider);
-                            eventHandler.connectedFuture().addListener((f) -> connectedFuture.run());
+                            eventHandler.connectedFuture()
+                                    .addListener((f) -> connectedFuture.setSuccess(eventHandler.channel()));
                             return eventHandler;
                         })
                 .addListener(new FutureListener<SelectionKey>() {
@@ -52,7 +56,4 @@ public class Client {
         return connectedFuture;
     }
 
-    public void shutdown() {
-
-    }
 }

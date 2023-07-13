@@ -1,6 +1,5 @@
-package io.github.light0x00.letty.expr
+package io.github.light0x00.letty.expr.handler
 
-import io.github.light0x00.letty.expr.eventloop.EventLoop
 import io.github.light0x00.letty.expr.eventloop.NioEventLoop
 import java.net.SocketAddress
 import java.net.SocketOption

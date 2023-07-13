@@ -13,3 +13,5 @@
 - [ ] Outbound Buffer 分离为单独组件, 内部统计字节数量
 - [ ] Outbound Buffer 读写锁优化
 - [x] 对比 close、shutdownInput、shutdownOutput 在 TCP 层面的区别
+- [ ] 解决优雅关闭 channel 时双向(input、output)检测,都 shutdown 时将 channel 的 key cancel 
+- [ ] 看 Netty shutdownGracefully 源码实现 (紧急)

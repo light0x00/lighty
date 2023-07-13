@@ -1,6 +1,7 @@
 package io.github.light0x00.letty.expr.eventloop;
 
 import io.github.light0x00.letty.expr.concurrent.ListenableFutureTask;
+import io.github.light0x00.letty.expr.concurrent.RejectedExecutionHandler;
 import io.github.light0x00.letty.expr.handler.EventHandler;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -17,6 +18,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -32,6 +34,15 @@ public class NioEventLoop implements EventLoop {
     private static final int TERMINATED = 2;
 
     private final Queue<Runnable> tasks = new ConcurrentLinkedDeque<>();
+
+    /**
+     * 如果调用 {@link SingleThreadExecutor#execute(Runnable)} 添加的任务,
+     * 因任何原因而导致未被执行,(如队列容量上限或已经shutdown),
+     * 都将转交给 {@link RejectedExecutionHandler}
+     */
+    private final RejectedExecutionHandler rejectedExecutionHandler = (task, executor) -> {
+        throw new RejectedExecutionException();
+    };
 
     private final Selector selector;
 
@@ -63,10 +74,32 @@ public class NioEventLoop implements EventLoop {
 
     @Override
     public void execute(@Nonnull Runnable command) {
-        addTask(command, true);
-        if (!inEventLoop()) {
-            startup();
+
+        if (state.get() == NOT_STARTED && state.compareAndSet(NOT_STARTED, STARTED)) {
+            executor.execute(this::run);
         }
+        /*
+        * The race condition:
+        * - shutdown,state = SHUTDOWN
+        * - execute, if state == STARTED then do
+        *
+        * Inspired from `ThreadPoolExecutor#execute` written by the Doug Lea.
+        * Here we use lock-free way to solve the race condition. It consists of three phases:
+        * 1.check condition
+        * 2.do
+        * 3.recheck condition, then decide confirm or rollback
+        * */
+        if (state.get() == STARTED) {
+            addTask(command, true);
+            if (state.get() != STARTED) {
+                if (tasks.remove(command)) {
+                    rejectedExecutionHandler.rejected(command, this);
+                }
+            }
+        } else {
+            rejectedExecutionHandler.rejected(command, this);
+        }
+
     }
 
     public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, EventHandler handler) {
@@ -84,12 +117,22 @@ public class NioEventLoop implements EventLoop {
             @Override
             @SneakyThrows
             public SelectionKey call() {
+                if (!channel.isOpen()) {
+                    //Indicate the channel closing operation happened before current register operation.
+                    //Usually it happened in the previous event loop.
+                    //For this situation, a ClosedChannelException will be thrown.
+                    log.warn("Channel has been closed");
+                }
                 SelectionKey key = channel.register(selector, interestOps);
                 key.attach(eventHandlerProvider.apply(key));
                 return key;
             }
         }, this);
-        execute(future);
+        if (inEventLoop()) {
+            future.run();
+        } else {
+            execute(future);
+        }
         return future;
     }
 
@@ -98,9 +141,7 @@ public class NioEventLoop implements EventLoop {
     }
 
     private void startup() {
-        if (state.compareAndSet(NOT_STARTED, STARTED)) {
-            executor.execute(this::run);
-        }
+
     }
 
     @Override
@@ -126,7 +167,11 @@ public class NioEventLoop implements EventLoop {
         while (!Thread.currentThread().isInterrupted()) {
             Runnable c;
             while ((c = tasks.poll()) != null) {
-                safeExecute(c);
+                try {
+                    c.run();
+                } catch (Throwable th) {
+                    log.error("", th);  //TODO 交给异常捕获
+                }
             }
             selector.select();
             Set<SelectionKey> events = selector.selectedKeys();
@@ -153,15 +198,7 @@ public class NioEventLoop implements EventLoop {
     private void onTerminated() {
         selector.close();
         shutdownFuture.run();
-    }
-
-    private void safeExecute(Runnable r) {
-        try {
-            r.run();
-        } catch (Throwable th) {
-            log.error("", th);
-            //TODO 交给异常捕获
-        }
+        //TODO 关闭selector 中的 socket
     }
 
     @Override
