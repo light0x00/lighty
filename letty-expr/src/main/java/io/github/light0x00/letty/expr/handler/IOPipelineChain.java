@@ -52,7 +52,7 @@ public class IOPipelineChain {
     private static List<InboundChannelHandler> filterInboundHandlers(List<InboundChannelHandler> inboundHandlers) {
         return inboundHandlers.stream()
                 .filter(ha ->
-                        !Tool.existAnnotation(Skip.class, ha.getClass(), "onRead", ChannelContext.class, Object.class, InboundPipeline.class)
+                        !Tool.methodExistAnnotation(Skip.class, ha.getClass(), "onRead", ChannelContext.class, Object.class, InboundPipeline.class)
                 )
                 .collect(Collectors.toList());
     }
@@ -60,7 +60,7 @@ public class IOPipelineChain {
     private static List<OutboundChannelHandler> filterOutboundHandlers(List<OutboundChannelHandler> inboundHandlers) {
         return inboundHandlers.stream()
                 .filter(ha ->
-                        !Tool.existAnnotation(Skip.class, ha.getClass(), "onWrite", ChannelContext.class, Object.class, OutboundPipeline.class)
+                        !Tool.methodExistAnnotation(Skip.class, ha.getClass(), "onWrite", ChannelContext.class, Object.class, OutboundPipeline.class)
                 )
                 .collect(Collectors.toList());
     }

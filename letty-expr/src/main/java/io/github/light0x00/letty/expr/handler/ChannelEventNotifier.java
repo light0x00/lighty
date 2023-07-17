@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.github.light0x00.letty.expr.util.Tool.existAnnotation;
+import static io.github.light0x00.letty.expr.util.Tool.methodExistAnnotation;
 
 /**
  * @author light0x00
@@ -34,15 +34,15 @@ public class ChannelEventNotifier implements ChannelObserver {
                 .collect(Collectors.toSet()); //去重,主要是针对同时实现了 inbound、outbound 接口的 handler
 
         connectedEventObservers = observers.stream().filter(
-                it -> !existAnnotation(Skip.class, it.getClass(), "onConnected", ChannelContext.class)
+                it -> !methodExistAnnotation(Skip.class, it.getClass(), "onConnected", ChannelContext.class)
         ).toList();
 
         readCompletedEventObservers = observers.stream().filter(
-                it -> !existAnnotation(Skip.class, it.getClass(), "onReadCompleted", ChannelContext.class)
+                it -> !methodExistAnnotation(Skip.class, it.getClass(), "onReadCompleted", ChannelContext.class)
         ).toList();
 
         closedEventObservers = observers.stream().filter(
-                it -> !existAnnotation(Skip.class, it.getClass(), "onClosed", ChannelContext.class)
+                it -> !methodExistAnnotation(Skip.class, it.getClass(), "onClosed", ChannelContext.class)
         ).toList();
 
     }

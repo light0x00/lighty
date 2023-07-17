@@ -79,16 +79,16 @@ public class NioEventLoop implements EventLoop {
             executor.execute(this::run);
         }
         /*
-        * The race condition:
-        * - shutdown,state = SHUTDOWN
-        * - execute, if state == STARTED then do
-        *
-        * Inspired from `ThreadPoolExecutor#execute` written by the Doug Lea.
-        * Here we use lock-free way to solve the race condition. It consists of three phases:
-        * 1.check condition
-        * 2.do
-        * 3.recheck condition, then decide confirm or rollback
-        * */
+         * The race condition:
+         * - shutdown,state = SHUTDOWN
+         * - execute, if state == STARTED then do
+         *
+         * Inspired from `ThreadPoolExecutor#execute` written by the Doug Lea.
+         * Here we use lock-free way to solve the race condition. It consists of three phases:
+         * 1.check condition
+         * 2.do
+         * 3.recheck condition, then decide confirm or rollback
+         * */
         if (state.get() == STARTED) {
             addTask(command, true);
             if (state.get() != STARTED) {
@@ -163,6 +163,7 @@ public class NioEventLoop implements EventLoop {
 
     @SneakyThrows
     private void run() {
+        log.debug("Event loop started");
         workerThread = Thread.currentThread();
         while (!Thread.currentThread().isInterrupted()) {
             Runnable c;
@@ -183,10 +184,8 @@ public class NioEventLoop implements EventLoop {
                     eventHandler.onEvent(key);
                 } catch (Throwable th) {
                     log.error("Error occurred while process event", th); //TODO 交给异常捕获
-                    if (th instanceof IOException) {
-                        key.cancel();
-                        key.channel().close();
-                    }
+                    key.cancel();
+                    key.channel().close();
                 }
                 it.remove();
             }

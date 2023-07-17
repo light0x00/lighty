@@ -16,6 +16,7 @@ class ClientMessageHandler extends ChannelHandlerAdapter {
     public void onConnected(ChannelContext context) {
 //        context.channel().write("hello world");
 //        context.channel().close();
+        log.info("{}",context.channel().localAddress());
     }
 
     @Override

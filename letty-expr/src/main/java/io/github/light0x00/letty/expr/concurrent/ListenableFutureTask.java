@@ -51,6 +51,14 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
         this.defaultNotifier = defaultNotifier;
     }
 
+    {
+        addListener(futureTask -> {
+            if (!futureTask.isSuccess()) {
+                futureTask.cause().printStackTrace();
+            }
+        });
+    }
+
     @Override
     protected void done() {
         if (hasRun.compareAndSet(false, true))

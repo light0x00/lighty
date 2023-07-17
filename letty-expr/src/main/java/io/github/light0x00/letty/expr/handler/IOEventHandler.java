@@ -10,6 +10,7 @@ import io.github.light0x00.letty.expr.eventloop.EventLoop;
 import io.github.light0x00.letty.expr.eventloop.EventLoopGroup;
 import io.github.light0x00.letty.expr.eventloop.NioEventLoop;
 import io.github.light0x00.letty.expr.handler.adapter.ChannelHandler;
+import io.github.light0x00.letty.expr.util.LettyException;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
@@ -159,7 +161,7 @@ public class IOEventHandler implements EventHandler {
         SocketChannel channel = (SocketChannel) key.channel();
 
         channel.finishConnect();
-        key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+        key.interestOps((key.interestOps() ^ SelectionKey.OP_CONNECT) | SelectionKey.OP_READ);
 
         connectedFuture.run();
         eventNotifier.onConnected(context);
@@ -220,17 +222,27 @@ public class IOEventHandler implements EventHandler {
 
     @SneakyThrows
     private ListenableFutureTask<Void> write(Object data, ListenableFutureTask<Void> writeFuture) {
-        if (!(data instanceof RingByteBuffer buf)) {
-            throw new ClassCastException("Unsupported data type to write:" + data.getClass());
+
+        RingByteBuffer rBuf;
+        if (data instanceof RingByteBuffer) {
+            rBuf = (RingByteBuffer) data;
+        } else if (data instanceof ByteBuffer bBuf) {
+            rBuf = new RingByteBuffer(bBuf, bBuf.position(), bBuf.limit(), bBuf.limit());
+        } else if (data.getClass().equals(byte[].class)) {
+            ByteBuffer bBuf = ByteBuffer.wrap((byte[]) data);
+            rBuf = new RingByteBuffer(bBuf, bBuf.position(), bBuf.limit(), bBuf.limit());
+        } else {
+            throw new LettyException("Unsupported data type to write:" + data.getClass());
         }
+
         synchronized (outboundLock) {
             if (outboundFIN) {
                 throw new ClosedChannelException();
             }
 
-            buf.writeToChannel(javaChannel);
-            if (buf.remainingCanGet() > 0) {
-                outboundBuffer.offer(new BufferFuturePair(buf, writeFuture));
+            rBuf.writeToChannel(javaChannel);
+            if (rBuf.remainingCanGet() > 0) {
+                outboundBuffer.offer(new BufferFuturePair(rBuf, writeFuture));
                 key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
             }
         }

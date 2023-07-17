@@ -2,6 +2,7 @@ package io.github.light0x00.letty.expr.buffer;
 
 import java.nio.ByteBuffer;
 
+@Deprecated
 public class ReadWriteByteBuffer{
 
     private final ByteBuffer bufferR;
