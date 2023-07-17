@@ -59,7 +59,7 @@ class RingByteBufferTest {
      * 轮流执行 put 、 get
      */
     @Test
-    fun testPutAndGetAlternate() {
+    fun testPutAndGetAlternately() {
         val buf = RingByteBuffer(ByteBuffer.allocate(4))
         /*
          ┌───┬───┬───┬───┐
@@ -108,7 +108,7 @@ class RingByteBufferTest {
     }
 
     @Test
-    fun testPutAndGetAlternate2() {
+    fun testPutAndGetAlternately2() {
         val buf = RingByteBuffer(ByteBuffer.allocate(4))
         /*
          ┌───┬───┬───┬───┐
@@ -232,7 +232,6 @@ class RingByteBufferTest {
         //全部读出 应为空
         Assertions.assertEquals(0, dst.remainingCanGet())
     }
-
 
     private fun assertState(
         buf: RingByteBuffer,

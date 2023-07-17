@@ -5,6 +5,7 @@ import lombok.Getter;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
@@ -18,6 +19,7 @@ import java.util.*;
  * @author light0x00
  * @since 2023/7/5
  */
+@NotThreadSafe
 public class RingByteBuffer {
 
     private final ByteBuffer buffer;
@@ -33,9 +35,16 @@ public class RingByteBuffer {
     @Getter
     final int capacity;
 
-    public RingByteBuffer(ByteBuffer buffer) {
+    public RingByteBuffer(ByteBuffer buffer, int writePosition, int readPosition, int capacity) {
         this.buffer = buffer;
         this.capacity = buffer.capacity();
+        this.writePosition = writePosition;
+        this.readPosition = readPosition;
+
+    }
+
+    public RingByteBuffer(ByteBuffer buffer) {
+        this(buffer, 0, 0, buffer.capacity());
     }
 
     /**
@@ -47,9 +56,7 @@ public class RingByteBuffer {
         }
         byte b = buffer.get(readPosition);
         --bytesUnRead;
-        if (++readPosition == capacity) {
-            readPosition = 0;
-        }
+        readPosition = nextPosition(readPosition);
         return b;
     }
 
@@ -69,14 +76,11 @@ public class RingByteBuffer {
 
         for (int i = 0; i < length; i++) {
             dst[i] = buffer.get(readPosition);
-            if (++readPosition == capacity) {
-                readPosition = 0;
-            }
+            readPosition = nextPosition(readPosition);
         }
         bytesUnRead -= length;
         return this;
     }
-
 
     /**
      * @see ByteBuffer#put(byte)
@@ -87,9 +91,7 @@ public class RingByteBuffer {
         }
         buffer.put(writePosition, value);
         ++bytesUnRead;
-        if (++writePosition == capacity) {
-            writePosition = 0;
-        }
+        writePosition = nextPosition(writePosition);
         return this;
     }
 
@@ -108,9 +110,7 @@ public class RingByteBuffer {
         }
         for (int i = 0; i < length; i++) {
             buffer.put(writePosition, src[offset + i]);
-            if (++writePosition == capacity) {
-                writePosition = 0;
-            }
+            writePosition = nextPosition(writePosition);
         }
         bytesUnRead += length;
         return this;
@@ -161,6 +161,9 @@ public class RingByteBuffer {
         return put(src, src.remainingCanGet());
     }
 
+    /**
+     * @implNote The positions of the src buffer are then incremented by length.
+     */
     public RingByteBuffer put(RingByteBuffer src, int length) {
         if (length <= 0) {
             throw new IndexOutOfBoundsException();
@@ -203,7 +206,7 @@ public class RingByteBuffer {
     }
 
     /**
-     * 写入 channel 数据到 buffer
+     * Read data from channel to this buffer.
      */
     public int readFromChannel(ScatteringByteChannel channel) throws IOException {
         FragmentList list = writableFragments();
@@ -221,7 +224,7 @@ public class RingByteBuffer {
     }
 
     /**
-     * 读出 buffer 数据到 channel
+     * Write data from buffer to channel.
      */
     public int writeToChannel(GatheringByteChannel channel) throws IOException {
         FragmentList list = readableFragments();
@@ -238,7 +241,6 @@ public class RingByteBuffer {
 
     private FragmentList readableFragments() {
         FragmentList fragments = new FragmentList();
-        // r    w
         /*
             * r * w
             0 1 2 3
@@ -328,6 +330,14 @@ public class RingByteBuffer {
         readPosition = 0;
         writePosition = 0;
         bytesUnRead = 0;
+    }
+
+    private int nextPosition(int position) {
+        int next = position + 1;
+        if (next == capacity) {
+            return 0;
+        }
+        return next;
     }
 
     private void moveReadOffset(int step) {
@@ -433,7 +443,7 @@ public class RingByteBuffer {
         /**
          * 碎片对应的 buffer 切片
          */
-        ByteBuffer sliceBuf(){
+        ByteBuffer sliceBuf() {
             return buffer.slice(offset, length);
         }
     }
