@@ -9,7 +9,6 @@ import javax.annotation.concurrent.GuardedBy;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author light0x00
@@ -31,7 +30,7 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
     @Nullable
     private final Executor defaultNotifier;
 
-    AtomicBoolean hasRun = new AtomicBoolean();
+    private volatile boolean hasDone;
 
     /**
      * For waite/notify scenarios
@@ -61,8 +60,8 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
 
     @Override
     protected void done() {
-        if (hasRun.compareAndSet(false, true))
-            notifyListeners();
+        hasDone = true;
+        notifyListeners();
     }
 
     @SneakyThrows   // we don't need the fucking checked exception, so here make it implicit. ^ ^
@@ -101,25 +100,41 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
 
     public ListenableFutureTask<T> addListener(FutureListener<T> listener, @Nullable Executor executor) {
         /*
-         * 当 isDone == true 时, 意味着 state 已经不可变, 故不存在 rc.
-         * */
-        if (isDone()) {
+        关于为什么这里不能用 FutureTask#isDone 作为判断依据的原因
+
+        根据 FutureTask#set FutureTask#setException 的逻辑
+        1. 更新 state 为 “done”
+        2. 设置结果(可以是: outcome,exception,cancellation)
+        3. 执行 done() 通知子类
+
+        这个3个操作(整体)并非原子,并发环境这会产生如下执行时序:
+
+         threadA: state = "done"
+         threadB: if state = "done"
+         threadB: notifyListener  # 此时 listener 调用 FutureTask#get() 将得到空的结果
+         threadA: 设置future结果
+         threadA: done()
+
+         为了避免过早的 “done”, 需要将 “done” 的状态流转延迟到 “设置future结果” 之后
+         这是为什么新增了额外的状态字段, 该状态在 done() 方法中变更为 “done”
+         */
+        if (hasDone) {
             notifyListener(new ListenerExecutorPair<>(listener, executor));
         } else {
             /*
-             * 而当 isDone == false 时, 可能被并发读写, 此情况需加锁
+             * 而当 done == false 时, 可能被并发读写, 此情况需加锁
              * The race condition is that `notifyListeners` may be call between the `If` and `Then` in `addListener`
              *
              * threadA: If not done
-             * threadB: done
-             * threadB: notifyListeners
+             * threadB: done()
+             * threadB: notifyListeners()
              * threadA: Then list.add()
              *
              * To prevent this, what to do is make it mutually exclusive between `If Then act` and `notifyListeners`.
              * Here we use `this` as a mutex/
              * */
             synchronized (this) {
-                if (isDone()) {
+                if (hasDone) {
                     notifyListener(new ListenerExecutorPair<>(listener, executor));
                 } else {
                     listeners.add(new ListenerExecutorPair<>(listener, executor));
