@@ -5,23 +5,23 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Function;
 
-public class BufferPool {
+public class BufferPool<T extends ByteBuffer> {
 
     /**
      * 使用软引用,避免过多空闲的 buffer 导致 OOM , 作为兜底保障.
      * <p>
      * TODO 可引入 LRU/LFU 主动清理空闲的 buffer.
      */
-    private final NavigableMap<Integer, SoftReference<Set<ByteBuffer>>> pool = new TreeMap<>();
-    private final Function<Integer, ByteBuffer> bufferAllocator;
+    private final NavigableMap<Integer, SoftReference<Set<T>>> pool = new TreeMap<>();
+    private final Function<Integer, T> bufferAllocator;
 
-    public BufferPool(Function<Integer, ByteBuffer> byteBufferFactory) {
+    public BufferPool(Function<Integer, T> byteBufferFactory) {
         this.bufferAllocator = byteBufferFactory;
     }
 
-    public ByteBuffer takeOriginal(int capacityAtLeast) {
+    public RecyclableByteBuffer<T> take(int capacity) {
         synchronized (pool) {
-            return pool.tailMap(capacityAtLeast)
+            return pool.tailMap(capacity)
                     .values()
                     .stream()
                     .map(SoftReference::get)
@@ -31,29 +31,22 @@ public class BufferPool {
                     .findAny()
                     .map(buf -> {
                         buf.clear();  //清除之前的 buffer 状态
-                        return buf;
+                        if (buf.capacity() != capacity) {
+                            return wrapBuffer(buf, 0, capacity);
+                        } else {
+                            return wrapBuffer(buf);
+                        }
                     })
-                    .orElseGet(() -> bufferAllocator.apply(capacityAtLeast));
+                    .orElseGet(() -> wrapBuffer(bufferAllocator.apply(capacity)));
         }
     }
 
-    public RecyclableByteBuffer take(int capacity) {
-        synchronized (pool) {
-            ByteBuffer buf = takeOriginal(capacity);
-            if (buf.capacity() != capacity) {
-                return wrapBuffer(buf, 0, capacity);
-            } else {
-                return wrapBuffer(buf);
-            }
-        }
+    private RecyclableByteBuffer<T> wrapBuffer(T buffer) {
+        return new RecyclableByteBuffer<>(buffer, this);
     }
 
-    private RecyclableByteBuffer wrapBuffer(ByteBuffer buffer) {
-        return new RecyclableByteBuffer(buffer, this);
-    }
-
-    private RecyclableByteBuffer wrapBuffer(ByteBuffer buffer, int offset, int length) {
-        return new RecyclableByteBuffer(buffer, offset, length, this);
+    private RecyclableByteBuffer<T> wrapBuffer(T buffer, int offset, int length) {
+        return new RecyclableByteBuffer<>(buffer, offset, length, this);
     }
 
     private static <T> T removeNextOrNullInSet(Set<T> set) {
@@ -66,15 +59,14 @@ public class BufferPool {
         return null;
     }
 
-    public void recycle(RecyclableByteBuffer buffer) {
+    public void recycle(RecyclableByteBuffer<T> buffer) {
         recycle(buffer.bakingBuffer);
     }
 
-    public void recycle(ByteBuffer buffer) {
+    public void recycle(T buffer) {
         synchronized (pool) {
             var ref = pool.get(buffer.capacity());
-            //如果首次调用 get 对象存在,则应当附加一个强引用到该对象, 避免后续逻辑再次访问该对象时已被垃圾回收.
-            var bufs = Optional.ofNullable(ref).map(SoftReference::get).orElse(null);
+            var bufs = Optional.ofNullable(ref).map(SoftReference::get).orElse(null); //如果首次调用 get 对象存在,则应当附加一个强引用到该对象, 避免后续逻辑再次访问该对象时已被垃圾回收.
 
             if (ref == null || bufs == null) {
                 bufs = new HashSet<>();

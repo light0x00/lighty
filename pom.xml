@@ -9,8 +9,9 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
+        <module>letty-core-old</module>
         <module>letty-core</module>
-        <module>letty-expr</module>
+        <module>examples</module>
     </modules>
 
     <properties>
@@ -23,7 +24,11 @@
 
     <dependencyManagement>
         <dependencies>
-
+            <dependency>
+                <groupId>io.github.light0x00</groupId>
+                <artifactId>letty-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

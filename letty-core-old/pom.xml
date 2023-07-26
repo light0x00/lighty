@@ -9,8 +9,10 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>letty-core</artifactId>
+    <artifactId>letty-core-old</artifactId>
+
     <dependencies>
 
     </dependencies>
+
 </project>
