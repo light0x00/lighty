@@ -30,7 +30,7 @@ public interface ChannelConfiguration {
     }
 
     @Nullable
-    default EventLoopGroup<?> handlerExecutor(){
+    default EventLoopGroup<?> handlerExecutor() {
         return null;
     }
 

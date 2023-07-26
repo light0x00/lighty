@@ -13,7 +13,9 @@ import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Objects;
 
 /**
  * @author light0x00
@@ -36,11 +38,11 @@ public class RingByteBuffer {
     final int capacity;
 
     /**
-     * @param buffer the baking buffer
-     * @param readPosition the read position
+     * @param buffer        the baking buffer
+     * @param readPosition  the read position
      * @param writePosition the write position
-     * @param capacity the size of the ring buffer, start with 0.
-     * @param allUnRead when the read and write position overlap, indicate that weather the ring buffer is full or empty.
+     * @param capacity      the size of the ring buffer, start with 0.
+     * @param allUnRead     when the read and write position overlap, indicate that weather the ring buffer is full or empty.
      */
     public RingByteBuffer(ByteBuffer buffer, int readPosition, int writePosition, int capacity, boolean allUnRead) {
         if (capacity <= 0) {

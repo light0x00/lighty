@@ -3,7 +3,7 @@ package io.github.light0x00.letty.core.buffer;
 import java.nio.ByteBuffer;
 
 @Deprecated
-public class ReadWriteByteBuffer{
+public class ReadWriteByteBuffer {
 
     private final ByteBuffer bufferR;
     private final ByteBuffer bufferW;
@@ -25,12 +25,12 @@ public class ReadWriteByteBuffer{
     }
 
 
-    public int capacity(){
+    public int capacity() {
         beforeAccessBuffer();
         return bufferR.capacity();
     }
 
-    protected void beforeAccessBuffer(){
+    protected void beforeAccessBuffer() {
     }
 
 }

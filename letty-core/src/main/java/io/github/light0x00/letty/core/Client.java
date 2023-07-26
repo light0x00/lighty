@@ -1,10 +1,10 @@
 package io.github.light0x00.letty.core;
 
+import io.github.light0x00.letty.core.concurrent.FutureListener;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.NioEventLoop;
-import io.github.light0x00.letty.core.handler.IOEventHandler;
-import io.github.light0x00.letty.core.concurrent.FutureListener;
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup;
+import io.github.light0x00.letty.core.handler.IOEventHandler;
 import io.github.light0x00.letty.core.handler.NioSocketChannel;
 import lombok.SneakyThrows;
 

@@ -9,7 +9,7 @@ public interface LettyConfig {
      */
     boolean isAllowHalfClosure();
 
-    default int readBufSize(){
+    default int readBufSize() {
         return 16;
     }
 

@@ -12,7 +12,7 @@ import java.util.concurrent.Executor;
  */
 public interface EventLoop extends Executor {
 
-    default  <T> ListenableFutureTask<T> submit(@Nonnull Callable<T> callable) {
+    default <T> ListenableFutureTask<T> submit(@Nonnull Callable<T> callable) {
         return submit0(new ListenableFutureTask<>(callable, this));
     }
 
