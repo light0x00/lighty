@@ -13,6 +13,44 @@ import java.nio.ByteBuffer
  * @since 2023/7/6
  */
 class RingByteBufferTest {
+
+    @Test
+    fun testConstruct() {
+        val buf = ByteBuffer.allocate(16)
+        buf.put(1)
+        buf.put(2)
+        buf.put(3)
+        buf.flip()
+
+        val rBuf = RingByteBuffer(buf, buf.position(), buf.limit(), buf.capacity(), false)
+        for (i in 1..3) {
+            Assertions.assertEquals(i.toByte(), rBuf.get());
+        }
+        Assertions.assertThrows(BufferUnderflowException::class.java) {
+            rBuf.get()
+        }
+    }
+
+    @Test
+    fun testConstruct2() {
+        val buf = ByteBuffer.allocate(16)
+        buf.put(1)
+        buf.put(2)
+        buf.put(3)
+        buf.put(4)
+        buf.flip()
+
+        val rBuf = RingByteBuffer(buf, 3, 1, 4, false)
+
+        Assertions.assertEquals(2, rBuf.remainingCanGet())
+
+        Assertions.assertEquals(4, rBuf.get());
+        Assertions.assertEquals(1, rBuf.get());
+        Assertions.assertThrows(BufferUnderflowException::class.java) {
+            rBuf.get()
+        }
+    }
+
     @Test
     fun testGetWhatPut() {
         val buf = RingByteBuffer(ByteBuffer.allocate(4))
@@ -51,7 +89,7 @@ class RingByteBufferTest {
         val buf = RingByteBuffer(ByteBuffer.allocate(4))
         buf.put(byteArrayOf(1, 2))
         Assertions.assertThrows(BufferUnderflowException::class.java) {
-            buf[ByteArray(3)]
+            buf.get(ByteArray(3))
         }
     }
 

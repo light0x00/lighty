@@ -2,6 +2,7 @@ package io.github.light0x00.letty.expr.concurrent;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -14,6 +15,7 @@ import java.util.concurrent.*;
  * @author light0x00
  * @since 2023/6/16
  */
+@Slf4j
 public class ListenableFutureTask<T> extends FutureTask<T> {
 
     @GuardedBy("this")
@@ -50,14 +52,6 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
         this.defaultNotifier = defaultNotifier;
     }
 
-    {
-        addListener(futureTask -> {
-            if (!futureTask.isSuccess()) {
-                futureTask.cause().printStackTrace();
-            }
-        });
-    }
-
     @Override
     protected void done() {
         hasDone = true;
@@ -89,7 +83,9 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
         try {
             super.get();
             return null;
-        } catch (ExecutionException | InterruptedException e) {
+        } catch (ExecutionException e) {
+            return e.getCause();
+        } catch (InterruptedException e) {
             return e;
         }
     }

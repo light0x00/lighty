@@ -35,16 +35,41 @@ public class RingByteBuffer {
     @Getter
     final int capacity;
 
-    public RingByteBuffer(ByteBuffer buffer, int writePosition, int readPosition, int capacity) {
-        this.buffer = buffer;
-        this.capacity = buffer.capacity();
-        this.writePosition = writePosition;
-        this.readPosition = readPosition;
+    /**
+     * @param buffer the baking buffer
+     * @param readPosition the read position
+     * @param writePosition the write position
+     * @param capacity the size of the ring buffer, start with 0.
+     * @param allUnRead when the read and write position overlap, indicate that weather the ring buffer is full or empty.
+     */
+    public RingByteBuffer(ByteBuffer buffer, int readPosition, int writePosition, int capacity, boolean allUnRead) {
+        if (capacity <= 0) {
+            throw new IllegalArgumentException();
+        }
+        if (readPosition > capacity || readPosition < 0) {
+            throw new BufferUnderflowException();
+        }
+        if (writePosition > capacity || writePosition < 0) {
+            throw new BufferOverflowException();
+        }
 
+        this.buffer = buffer;
+        this.capacity = capacity;
+        this.readPosition = readPosition;
+        this.writePosition = writePosition;
+
+        if (readPosition == writePosition) { //读写指针相等, 意味着要么全部未读, 要么全部已读.
+            bytesUnRead = allUnRead ? capacity : 0; //这里根据标识决定属于哪种情况.
+        } else if (readPosition < writePosition) {
+            bytesUnRead = writePosition - readPosition;
+        } else {
+            bytesUnRead = (writePosition) + (capacity - readPosition);
+        }
     }
 
+
     public RingByteBuffer(ByteBuffer buffer) {
-        this(buffer, 0, 0, buffer.capacity());
+        this(buffer, 0, 0, buffer.capacity(), false);
     }
 
     /**

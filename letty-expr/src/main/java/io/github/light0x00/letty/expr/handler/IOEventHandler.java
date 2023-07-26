@@ -18,12 +18,13 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
+import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * 基于责任链和观察者模式分发底层事件
@@ -52,57 +53,67 @@ public class IOEventHandler implements EventHandler {
     protected final NioSocketChannel channel;
 
     /**
-     * 对方是否发送 FIN 包, 这意味着已经读完了 socket 读缓冲区的最后一个字节
-     */
-    private volatile boolean inboundFIN;
-
-    /**
-     * 当前端是否发送了 FIN 包, 这意味着不会再写入更多数据到 socket 写缓冲区
-     */
-    private volatile boolean outboundFIN;
-
-    /**
-     * 握手成功后触发
+     * 握手后触发,可能
      */
     @Getter
-    protected final ListenableFutureTask<Void> connectedFuture = new ListenableFutureTask<>(null);
+    protected final ListenableFutureTask<NioSocketChannel> connectedFuture = new ListenableFutureTask<>(null);
     /**
-     * 两端关闭时,即两阶段回收完成时触发
+     * 两端关闭时,即两阶段挥手完成时触发
      */
     @Getter
     protected final ListenableFutureTask<Void> closedFuture = new ListenableFutureTask<>(null);
 
+    @GuardedBy("outboundLock")
+    private final Queue<BufferFuturePair> outputBuffer = new ConcurrentLinkedDeque<>();
+
     /**
-     * 目前存在的竞争条件:
-     * <p>
-     * 事件线程/用户线程 {@link #shutdownOutput()} 执行:
+     * 目前存在的竞争条件的3个方法分别为:
      *
-     * <pre>
-     * outboundFIN = true;
+     * <p>
+     * 1. 事件线程/用户线程 {@link #shutdownOutput()} 执行:
+     *
+     * <pre>{@code
+     * outputClosed = true;
      * clear
-     * </pre>
-     * <p>
-     * 用户线程 {@link #write(Object, ListenableFutureTask)} 执行:
+     * }</pre>
      *
-     * <pre>
-     * if outboundFIN == false
+     * <p>
+     * 2. 用户线程 {@link #write(Object, ListenableFutureTask)} 执行:
+     *
+     * <pre>{@code
+     * if outputClosed == false
      * then offer
-     * </pre>
+     * }</pre>
+     *
      * <p>
-     * 事件线程 {@link #processWritableEvent()} 执行:
-     * <pre>
-     * while(not empty)
+     * 3. 事件线程 {@link #processWritableEvent()} 执行:
+     * <pre>{@code
+     * if outputClosed == false
      *      poll
-     * </pre>
+     * }</pre>
+     *
      * <p>
-     * TODO: 可采用读写锁优化
-     * <li> {@link #write(Object, ListenableFutureTask)} {@link #processWritableEvent()} 可以并发执行, 使用读锁
+     * 应对方案:
+     * <li> {@link #write(Object, ListenableFutureTask)}, {@link #processWritableEvent()} 可以并发执行, 使用读锁
      * <li> {@link #shutdownOutput()} 需要排他执行,使用写锁
      */
-    @GuardedBy("outboundLock")
-    private final Queue<BufferFuturePair> outboundBuffer = new LinkedList<>();
+    private final ReentrantReadWriteLock outputLock = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock.WriteLock outputLockW = outputLock.writeLock();
+    private final ReentrantReadWriteLock.ReadLock outputLockR = outputLock.readLock();
 
-    private final Object outboundLock = new Object();
+    private volatile boolean outputBufferClosed;
+
+    private final Object closeLock = new Object();
+
+    /**
+     * 对方是否发送 FIN 包, 这意味着已经读完了 socket 读缓冲区的最后一个字节
+     */
+    private volatile boolean outputClosed;
+
+    /**
+     * 当前端是否发送了 FIN 包, 这意味着不会再写入更多数据到 socket 写缓冲区
+     */
+    private volatile boolean inputClosed;
 
     /**
      * 用于执行责任链和观察者
@@ -158,13 +169,15 @@ public class IOEventHandler implements EventHandler {
     }
 
     private void processConnectableEvent() throws IOException {
-        SocketChannel channel = (SocketChannel) key.channel();
-
-        channel.finishConnect();
-        key.interestOps((key.interestOps() ^ SelectionKey.OP_CONNECT) | SelectionKey.OP_READ);
-
-        connectedFuture.run();
+        try {
+            javaChannel.finishConnect();
+            connectedFuture.setSuccess(channel);
+        } catch (Exception e) {
+            connectedFuture.setFailure(e);
+            throw e;
+        }
         eventNotifier.onConnected(context);
+        key.interestOps((key.interestOps() ^ SelectionKey.OP_CONNECT) | SelectionKey.OP_READ);
     }
 
     private void processReadableEvent() throws IOException {
@@ -181,20 +194,16 @@ public class IOEventHandler implements EventHandler {
         if (n == -1) {
             log.debug("Received FIN from {}", javaChannel.getRemoteAddress());
 
-            inboundFIN = true;
-            key.interestOps(key.interestOps() ^ SelectionKey.OP_READ); //remove read from interestOps
-
-            eventNotifier.onReadCompleted(context);
-
-            if (!lettyConf.isAllowHalfClosure()) {
-                close();
-            }
+            readCompleted();
         }
     }
 
     private void processWritableEvent() throws IOException {
-        synchronized (outboundLock) {
-            for (BufferFuturePair bufFuture; (bufFuture = outboundBuffer.peek()) != null; ) {
+        try {
+
+            outputLock.readLock();
+
+            for (BufferFuturePair bufFuture; (bufFuture = outputBuffer.peek()) != null; ) {
 
                 RingByteBuffer buf = bufFuture.buffer();
                 /*
@@ -205,85 +214,157 @@ public class IOEventHandler implements EventHandler {
                  */
                 buf.writeToChannel(javaChannel);
                 if (buf.remainingCanGet() == 0) {
-                    outboundBuffer.poll();
-                    bufFuture.future.run();
+                    outputBuffer.poll();
+                    bufFuture.future.setSuccess();
                 } else {
                     //如果还有剩余，意味 socket 发送缓冲着已经满了，只能等待下一次 Writable 事件
                     log.debug("suspend writing socket buffer");
                     return;
                 }
             }
-
-            //remove write from interestOps
-            key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
-            log.debug("Outbound buffer has been flushed, remove interest to writeable event.");
+        } finally {
+            outputLockR.unlock();
         }
+
+        key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
+        log.debug("All the outbound buffer has been written, remove interest to writeable event.");
     }
 
     @SneakyThrows
     private ListenableFutureTask<Void> write(Object data, ListenableFutureTask<Void> writeFuture) {
 
-        RingByteBuffer rBuf;
-        if (data instanceof RingByteBuffer) {
-            rBuf = (RingByteBuffer) data;
-        } else if (data instanceof ByteBuffer bBuf) {
-            rBuf = new RingByteBuffer(bBuf, bBuf.position(), bBuf.limit(), bBuf.limit());
-        } else if (data.getClass().equals(byte[].class)) {
-            ByteBuffer bBuf = ByteBuffer.wrap((byte[]) data);
-            rBuf = new RingByteBuffer(bBuf, bBuf.position(), bBuf.limit(), bBuf.limit());
-        } else {
-            throw new LettyException("Unsupported data type to write:" + data.getClass());
-        }
+        try {
+            outputLockR.lock();
 
-        synchronized (outboundLock) {
-            if (outboundFIN) {
-                throw new ClosedChannelException();
+            if (outputClosed || outputBufferClosed) {
+                throw new LettyException("Output closed");
             }
 
-            rBuf.writeToChannel(javaChannel);
+            RingByteBuffer rBuf;
+            if (data instanceof RingByteBuffer) {
+                rBuf = (RingByteBuffer) data;
+            } else if (data instanceof ByteBuffer bBuf) {
+                rBuf = new RingByteBuffer(bBuf, bBuf.position(), bBuf.position(), bBuf.limit(), true);
+            } else if (data.getClass().equals(byte[].class)) {
+                ByteBuffer bBuf = ByteBuffer.wrap((byte[]) data);
+                rBuf = new RingByteBuffer(bBuf, bBuf.position(), bBuf.position(), bBuf.limit(), true);
+            } else {
+                throw new LettyException("Unsupported data type to write:" + data.getClass());
+            }
+
+            //if output not fin, then write
+            if (outputBuffer.isEmpty()) {
+                rBuf.writeToChannel(javaChannel);
+            }
             if (rBuf.remainingCanGet() > 0) {
-                outboundBuffer.offer(new BufferFuturePair(rBuf, writeFuture));
+                outputBuffer.offer(new BufferFuturePair(rBuf, writeFuture));
                 key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
             }
+
+        } finally {
+            outputLockR.unlock();
         }
         return writeFuture;
     }
 
-    @SneakyThrows
-    private void shutdownInput() {
-        //这个调用会触发一个读事件, read 返回 -1
-        //之后对方发送的数据都会收到 RST
-        javaChannel.shutdownInput();
-    }
+    private void readCompleted() {
+        //此方法不需要保证幂等
 
-    @SneakyThrows
-    private void shutdownOutput() {
-        log.debug("Be going to shutdown output...");
-        synchronized (outboundLock) {
-            outboundFIN = true;
+        //移除事件监听
+        key.interestOps(key.interestOps() ^ SelectionKey.OP_READ); //remove read from interestOps
+        //更新状态
+        inputClosed = true;
+        //事件通知
+        eventNotifier.onReadCompleted(context);
 
-            log.debug("Remove OP_WRITE from interest set");
-            key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
+        //保证状态(inputClosed)的写 happens before 对状态(inputClosed)的读
+        VarHandle.fullFence();
 
-            log.debug("Clear outbound buffer ,remaining:{}", outboundBuffer.size());
-            for (BufferFuturePair bufFuture; (bufFuture = outboundBuffer.poll()) != null; ) {
-                bufFuture.future.cancel(false);
-            }
-
-            javaChannel.shutdownOutput();
-            log.debug("Send FIN to {}", javaChannel.getRemoteAddress());
+        if (outputClosed) {
+            release();
+        } else if (!lettyConf.isAllowHalfClosure()) {
+            shutdownOutput();
         }
     }
 
     @SneakyThrows
-    private void close() {
-        shutdownOutput();
+    public void shutdownInput() {
+        //这个调用会触发一个读事件, read 返回 -1
+        //此调用之后对方发送的数据都会收到 RST
+        javaChannel.shutdownInput();
+    }
+
+    @SneakyThrows
+    public void shutdownOutput() {
+        synchronized (closeLock) {
+            if (outputClosed)
+                return;
+            outputClosed = true;
+        }
+
+        clearOutputBuffer();
+
+        //移除监听
+        key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
+        //关闭底层 socket 的输出
+        javaChannel.shutdownOutput();
+        log.debug("Send FIN to {}", javaChannel.getRemoteAddress());
+
+        //保证状态(outputClosed)的写 happens before 对状态(outputClosed)的读
+        VarHandle.fullFence();
+
+        if (inputClosed) {
+            release();
+        }
+    }
+
+    public void close() {
+        boolean needClearOutputBuffer = false;
+        synchronized (closeLock) {
+            //幂等
+            if (outputClosed && inputClosed) {
+                return;
+            }
+            //close 的时候有可能已经调用了 shutdownOutput , 也可能没有
+            //如果没有, 则需要执行一次清空
+            if (!outputClosed) {
+                needClearOutputBuffer = true;
+            }
+            outputClosed = inputClosed = true;
+        }
+        if (needClearOutputBuffer) {
+            clearOutputBuffer();
+        }
+        release();
+    }
+
+    private void clearOutputBuffer() {
+        try {
+            outputLockW.lock();
+            //更新状态
+            outputBufferClosed = true;
+
+            //清除输出缓冲
+            log.debug("Clear outbound buffer ,remaining:{}", outputBuffer.size());
+            for (BufferFuturePair bufFuture; (bufFuture = outputBuffer.poll()) != null; ) {
+                bufFuture.future.setFailure(new LettyException("Output Buffer cleared"));
+            }
+        } finally {
+            outputLockW.unlock();
+        }
+    }
+
+    @SneakyThrows
+    private void release() {
+        log.debug("Release resource {}", javaChannel);
 
         javaChannel.close();
         key.cancel();
 
         eventNotifier.onClosed(context);
         closedFuture.setSuccess();
+
+        log.debug("Channel closed");
     }
 
     private NioSocketChannelImpl channelDecorator() {
@@ -342,4 +423,5 @@ public class IOEventHandler implements EventHandler {
     private record BufferFuturePair(RingByteBuffer buffer, ListenableFutureTask<Void> future) {
 
     }
+
 }

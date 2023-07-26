@@ -19,6 +19,6 @@ public class ServerIOEventHandler extends IOEventHandler {
 
     private void processAcceptableEvent() {
         eventNotifier.onConnected(context);
-        connectedFuture.run();
+        connectedFuture.setSuccess(channel);
     }
 }

@@ -21,6 +21,9 @@ public class ChannelEventNotifier implements ChannelObserver {
     private final List<ChannelObserver> readCompletedEventObservers;
     private final List<ChannelObserver> closedEventObservers;
 
+    /**
+     * The event loop the observers are executed in
+     */
     EventLoop eventLoop;
 
     public ChannelEventNotifier(

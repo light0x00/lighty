@@ -36,12 +36,20 @@ public class Client {
 
         var connectedFuture = new ListenableFutureTask<NioSocketChannel>(null);
 
+
         NioEventLoop eventLoop = group.next();
         eventLoop.register(channel, SelectionKey.OP_CONNECT,
                         key -> {
                             IOEventHandler eventHandler = new IOEventHandler(eventLoop, channel, key, channelConfigurationProvider);
-                            eventHandler.connectedFuture()
-                                    .addListener((f) -> connectedFuture.setSuccess(eventHandler.channel()));
+                            eventHandler.connectedFuture().addListener(
+                                    e -> {
+                                        if (e.isSuccess()) {
+                                            connectedFuture.setSuccess(e.get());
+                                        } else {
+                                            connectedFuture.setFailure(e.cause());
+                                        }
+                                    }
+                            );
                             return eventHandler;
                         })
                 .addListener(new FutureListener<SelectionKey>() {
