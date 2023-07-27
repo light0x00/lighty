@@ -18,6 +18,8 @@ class ServerMessageHandler extends ChannelHandlerAdapter {
                 .addListener(
                         (f) -> context.channel().close()
                 );
+
+        context.channel().close();
     }
 
     @Override
