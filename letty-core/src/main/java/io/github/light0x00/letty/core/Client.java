@@ -41,7 +41,7 @@ public class Client {
         eventLoop.register(channel, SelectionKey.OP_CONNECT,
                         key -> {
                             IOEventHandler eventHandler = new IOEventHandler(eventLoop, channel, key, channelConfigurationProvider);
-                            eventHandler.connectedFuture().addListener(
+                            eventHandler.connectFuture().addListener(
                                     e -> {
                                         if (e.isSuccess()) {
                                             connectedFuture.setSuccess(e.get());

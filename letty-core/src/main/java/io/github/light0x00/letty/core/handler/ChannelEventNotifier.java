@@ -1,9 +1,12 @@
 package io.github.light0x00.letty.core.handler;
 
+import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.EventLoop;
 import io.github.light0x00.letty.core.util.Skip;
 import io.github.light0x00.letty.core.util.Tool;
+import lombok.Getter;
 
+import java.nio.channels.SocketChannel;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -19,11 +22,18 @@ public class ChannelEventNotifier implements ChannelObserver {
 
     private final List<ChannelObserver> readCompletedEventObservers;
     private final List<ChannelObserver> closedEventObservers;
+    private final List<ChannelObserver> errorEventObservers;
+
+    /**
+     * 两端关闭时({@link SocketChannel#shutdownInput()} ,{@link SocketChannel#shutdownOutput()}),或强制关闭时({@link SocketChannel#close()})触发
+     */
+    @Getter
+    protected final ListenableFutureTask<Void> closedFuture = new ListenableFutureTask<>(null);
 
     /**
      * The event loop the observers are executed in
      */
-    EventLoop eventLoop;
+    private EventLoop eventLoop;
 
     public ChannelEventNotifier(
             EventLoop eventLoop,
@@ -47,14 +57,32 @@ public class ChannelEventNotifier implements ChannelObserver {
                 it -> !Tool.methodExistAnnotation(Skip.class, it.getClass(), "onClosed", ChannelContext.class)
         ).toList();
 
+        errorEventObservers = observers.stream().filter(
+                it -> !Tool.methodExistAnnotation(Skip.class, it.getClass(), "onError", ChannelContext.class, Throwable.class)
+        ).toList();
+    }
+
+    @Override
+    public void onError(ChannelContext context, Throwable th) {
+        if (eventLoop.inEventLoop()) {
+            for (ChannelObserver errorEventObserver : errorEventObservers) {
+                errorEventObserver.onError(context, th);
+            }
+        } else {
+            for (ChannelObserver errorEventObserver : errorEventObservers) {
+                eventLoop.execute(() -> errorEventObserver.onError(context, th));
+            }
+        }
     }
 
     @Override
     public void onConnected(ChannelContext context) {
-        for (ChannelObserver connectedEventObserver : connectedEventObservers) {
-            if (eventLoop.inEventLoop()) {
+        if (eventLoop.inEventLoop()) {
+            for (ChannelObserver connectedEventObserver : connectedEventObservers) {
                 connectedEventObserver.onConnected(context);
-            } else {
+            }
+        } else {
+            for (ChannelObserver connectedEventObserver : connectedEventObservers) {
                 eventLoop.execute(() -> connectedEventObserver.onConnected(context));
             }
         }
@@ -62,10 +90,12 @@ public class ChannelEventNotifier implements ChannelObserver {
 
     @Override
     public void onReadCompleted(ChannelContext context) {
-        for (ChannelObserver readCompletedEventObserver : readCompletedEventObservers) {
-            if (eventLoop.inEventLoop()) {
+        if (eventLoop.inEventLoop()) {
+            for (ChannelObserver readCompletedEventObserver : readCompletedEventObservers) {
                 readCompletedEventObserver.onReadCompleted(context);
-            } else {
+            }
+        } else {
+            for (ChannelObserver readCompletedEventObserver : readCompletedEventObservers) {
                 eventLoop.execute(() -> readCompletedEventObserver.onReadCompleted(context));
             }
         }
@@ -73,10 +103,14 @@ public class ChannelEventNotifier implements ChannelObserver {
 
     @Override
     public void onClosed(ChannelContext context) {
-        for (ChannelObserver closedEventObserver : closedEventObservers) {
-            if (eventLoop.inEventLoop()) {
+        if (eventLoop.inEventLoop()) {
+            closedFuture.setSuccess();
+            for (ChannelObserver closedEventObserver : closedEventObservers) {
                 closedEventObserver.onClosed(context);
-            } else {
+            }
+        } else {
+            eventLoop.execute(closedFuture::setSuccess);
+            for (ChannelObserver closedEventObserver : closedEventObservers) {
                 eventLoop.execute(() -> closedEventObserver.onClosed(context));
             }
         }

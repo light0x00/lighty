@@ -50,17 +50,6 @@ public class IOEventHandler implements EventHandler {
     @Getter
     protected final NioSocketChannel channel;
 
-    /**
-     * 握手后触发,可能
-     */
-    @Getter
-    protected final ListenableFutureTask<NioSocketChannel> connectedFuture = new ListenableFutureTask<>(null);
-    /**
-     * 两端关闭时,即两阶段挥手完成时触发
-     */
-    @Getter
-    protected final ListenableFutureTask<Void> closedFuture = new ListenableFutureTask<>(null);
-
     private final OutputBuffer outputBuffer = new OutputBuffer();
 
     /**
@@ -87,6 +76,16 @@ public class IOEventHandler implements EventHandler {
     protected final IOPipelineChain ioChain;
 
     protected final ChannelEventNotifier eventNotifier;
+
+    /**
+     * 用于反馈握手的结果
+     */
+    @Getter
+    protected final ListenableFutureTask<NioSocketChannel> connectFuture = new ListenableFutureTask<>(null);
+
+    public ListenableFutureTask<Void> closedFuture() {
+        return eventNotifier.closedFuture;
+    }
 
     public IOEventHandler(NioEventLoop eventLoop, SocketChannel channel, SelectionKey key, ChannelConfigurationProvider configProvider) {
         this.eventLoop = eventLoop;
@@ -145,11 +144,11 @@ public class IOEventHandler implements EventHandler {
     private void processConnectableEvent() throws IOException {
         try {
             javaChannel.finishConnect();
-            connectedFuture.setSuccess(channel);
-        } catch (Exception e) {
-            connectedFuture.setFailure(e);
+        } catch (IOException e) {
+            connectFuture.setFailure(e);
             throw e;
         }
+        connectFuture.setSuccess();
         eventNotifier.onConnected(context);
         key.interestOps((key.interestOps() ^ SelectionKey.OP_CONNECT) | SelectionKey.OP_READ);
     }
@@ -320,17 +319,15 @@ public class IOEventHandler implements EventHandler {
         key.cancel();
 
         eventNotifier.onClosed(context);
-        closedFuture.setSuccess();
-
-        log.debug("Channel closed");
     }
 
-    private NioSocketChannelImpl channelDecorator() {
-        return new NioSocketChannelImpl(javaChannel) {
+    private AbstractNioSocketChannelImpl channelDecorator() {
+        return new AbstractNioSocketChannelImpl(javaChannel) {
+
             @NotNull
             @Override
             public ListenableFutureTask<Void> closeFuture() {
-                return closedFuture;
+                return IOEventHandler.this.closedFuture();
             }
 
             @NotNull
@@ -349,7 +346,7 @@ public class IOEventHandler implements EventHandler {
             @Override
             public ListenableFutureTask<Void> close() {
                 eventLoop.execute(IOEventHandler.this::close);
-                return closedFuture;
+                return IOEventHandler.this.closedFuture();
             }
 
             @Override

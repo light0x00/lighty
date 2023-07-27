@@ -17,6 +17,7 @@ class NioServerSocketChannel(
 ) {
 
     fun close() {
+        //TODO 调研 当 ServerSocketChannel cancel 后, 其 accept 的 SocketChannel 以及 SelectionKey 的状态, 考虑是否需要释放资源 [issue0001]
         eventLoop.execute {
             key.cancel()
             channel.close()

@@ -3,7 +3,7 @@
   - [ ] BufferPool 的 DirectByteBuffer 的回收问题
   - [ ] BufferPool LRU
 - [ ] EventLoop shutdown
-- [ ] 异常处理,异常捕获
+- [ ] 异常处理,异常捕获, 需要考虑: 哪些异常应该转给用户? [issue0000] 
 - [ ] 门面向 netty 对齐, 比如
   - 对用户不区分 inboundHandler、outboundHandler , 内部再区分, 
   - 比如设置 socket 的属性
@@ -15,3 +15,5 @@
 - [x] 对比 close、shutdownInput、shutdownOutput 在 TCP 层面的区别
 - [ ] 解决优雅关闭 channel 时双向(input、output)检测,都 shutdown 时将 channel 的 key cancel 
 - [ ] 看 Netty shutdownGracefully 源码实现 (紧急)
+- [ ] 将生命周期的几个 future 移入 ChannelEventNotifier 类, 然后用用户的 executor 去执行, 而不是 event loop 线程 
+- [ ] 调研 当 ServerSocketChannel cancel 后, 其 accept 的 SocketChannel 以及 SelectionKey 的状态, 考虑是否需要释放资源 [issue0001]

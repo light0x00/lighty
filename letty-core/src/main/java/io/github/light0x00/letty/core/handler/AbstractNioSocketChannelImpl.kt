@@ -9,15 +9,7 @@ import java.nio.channels.SocketChannel
  * @author light0x00
  * @since 2023/7/9
  */
-abstract class NioSocketChannelImpl(private val javaChannel: SocketChannel) : NioSocketChannel {
-
-    abstract override fun write(data: Any): ListenableFutureTask<Void>
-
-    abstract override fun close(): ListenableFutureTask<Void>
-
-    abstract override fun shutdownOutput(): ListenableFutureTask<Void>
-
-    abstract override fun shutdownInput(): ListenableFutureTask<Void>
+abstract class AbstractNioSocketChannelImpl(private val javaChannel: SocketChannel) : NioSocketChannel {
 
     override fun localAddress(): SocketAddress {
         return javaChannel.localAddress

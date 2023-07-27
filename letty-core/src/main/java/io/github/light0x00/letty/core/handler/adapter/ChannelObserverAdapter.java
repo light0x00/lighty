@@ -27,4 +27,10 @@ public abstract class ChannelObserverAdapter implements ChannelObserver {
     public void onClosed(ChannelContext context) {
 
     }
+
+    @Override
+    @Skip
+    public void onError(ChannelContext context, Throwable th) {
+
+    }
 }

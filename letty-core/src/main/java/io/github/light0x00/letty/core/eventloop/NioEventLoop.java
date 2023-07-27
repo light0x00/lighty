@@ -139,10 +139,6 @@ public class NioEventLoop implements EventLoop {
         selector.wakeup();
     }
 
-    private void startup() {
-
-    }
-
     @Override
     public ListenableFutureTask<Void> shutdown() {
         if (state.compareAndSet(NOT_STARTED, TERMINATED)) {
@@ -170,7 +166,7 @@ public class NioEventLoop implements EventLoop {
                 try {
                     c.run();
                 } catch (Throwable th) {
-                    log.error("", th);  //TODO 交给异常捕获
+                    log.error("", th);  //TODO 交给异常捕获   issue0000
                 }
             }
             selector.select();
@@ -182,7 +178,7 @@ public class NioEventLoop implements EventLoop {
                 try {
                     eventHandler.onEvent(key);
                 } catch (Throwable th) {
-                    log.error("Error occurred while process event", th); //TODO 交给异常捕获
+                    log.error("Error occurred while process event", th); //TODO 交给异常捕获  issue0000
                     key.cancel();
                     key.channel().close();
                 }

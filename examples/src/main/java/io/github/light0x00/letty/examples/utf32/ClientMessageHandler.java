@@ -13,6 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 class ClientMessageHandler extends ChannelHandlerAdapter {
 
     @Override
+    public void onError(ChannelContext context, Throwable th) {
+
+    }
+
+    @Override
     public void onConnected(ChannelContext context) {
 //        context.channel().write("hello world");
 //        context.channel().close();
