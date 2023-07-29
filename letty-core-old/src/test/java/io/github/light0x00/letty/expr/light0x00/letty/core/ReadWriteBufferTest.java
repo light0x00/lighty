@@ -1,6 +1,6 @@
 package io.github.light0x00.letty.expr.light0x00.letty.core;
 
-import io.github.light0x00.letty.core.buffer.ReadWriteByteBuffer;
+import io.github.light0x00.letty.old.buffer.ReadWriteByteBuffer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

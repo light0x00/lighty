@@ -1,4 +1,4 @@
-package io.github.light0x00.letty.core.buffer;
+package io.github.light0x00.letty.old.buffer;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;

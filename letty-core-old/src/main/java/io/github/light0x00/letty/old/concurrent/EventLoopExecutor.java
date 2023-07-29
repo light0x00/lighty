@@ -1,4 +1,4 @@
-package io.github.light0x00.letty.core.concurrent;
+package io.github.light0x00.letty.old.concurrent;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,11 +49,11 @@ public class EventLoopExecutor implements Executor {
     /**
      * 如果调用 {@link EventLoopExecutor#execute(Runnable)} 添加的任务,
      * 因任何原因而导致未被执行,(如队列容量上限或已经shutdown),
-     * 都将转交给 {@link RejectedExecutionHandler}
+     * 都将转交给 {@link io.github.light0x00.letty.old.concurrent.RejectedExecutionHandler}
      */
-    private final RejectedExecutionHandler rejectedExecutionHandler;
+    private final io.github.light0x00.letty.old.concurrent.RejectedExecutionHandler rejectedExecutionHandler;
 
-    private static final RejectedExecutionHandler DEFAULT_REJECTED_EXECUTION_HANDLER = (task, executor) -> {
+    private static final io.github.light0x00.letty.old.concurrent.RejectedExecutionHandler DEFAULT_REJECTED_EXECUTION_HANDLER = (task, executor) -> {
         throw new RejectedExecutionException();
     };
 
@@ -67,7 +67,7 @@ public class EventLoopExecutor implements Executor {
         this(Integer.MAX_VALUE, executor);
     }
 
-    public EventLoopExecutor(Executor executor, RejectedExecutionHandler rejectedExecutionHandler) {
+    public EventLoopExecutor(Executor executor, io.github.light0x00.letty.old.concurrent.RejectedExecutionHandler rejectedExecutionHandler) {
         this(Integer.MAX_VALUE, executor, rejectedExecutionHandler);
     }
 

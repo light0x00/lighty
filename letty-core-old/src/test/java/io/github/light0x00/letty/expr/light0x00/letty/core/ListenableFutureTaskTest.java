@@ -1,7 +1,7 @@
 package io.github.light0x00.letty.expr.light0x00.letty.core;
 
-import io.github.light0x00.letty.core.concurrent.EventLoopExecutor;
-import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
+import io.github.light0x00.letty.old.concurrent.EventLoopExecutor;
+import io.github.light0x00.letty.old.concurrent.ListenableFutureTask;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;

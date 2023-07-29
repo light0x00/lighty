@@ -1,16 +1,20 @@
-package io.github.light0x00.letty.core.concurrent;
+package io.github.light0x00.letty.old.concurrent;
 
 import lombok.AllArgsConstructor;
 
+import javax.annotation.Nonnull;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
+/**
+ * @author light0x00
+ * @since 2023/6/27
+ */
 @AllArgsConstructor
-public final class ThreadPerTaskExecutor implements Executor {
+public class SingleThreadPerTaskExecutor implements Executor {
     private final ThreadFactory threadFactory;
-
     @Override
-    public void execute(Runnable command) {
+    public void execute(@Nonnull Runnable command) {
         threadFactory.newThread(command).start();
     }
 }

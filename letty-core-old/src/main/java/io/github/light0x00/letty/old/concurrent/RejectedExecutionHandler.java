@@ -1,4 +1,4 @@
-package io.github.light0x00.letty.core.concurrent;
+package io.github.light0x00.letty.old.concurrent;
 
 /**
  * Similar to {@link java.util.concurrent.RejectedExecutionHandler} but specific to {@link EventLoopExecutor}.

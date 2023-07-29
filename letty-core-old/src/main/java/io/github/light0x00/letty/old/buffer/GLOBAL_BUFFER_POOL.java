@@ -1,4 +1,4 @@
-package io.github.light0x00.letty.core.buffer;
+package io.github.light0x00.letty.old.buffer;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
