@@ -10,7 +10,7 @@
 
 - 对于一个 channel 的读写、编码解码、报文处理,每一个阶段都可以指定不同的 `Executor` 执行, 但是对于每一个阶段,每次执行,执行线程应该总是不变. 这样可以避免线程安全问题.
 
-## 空轮询问题
+## 关于NIO
 
 无意义的 interest 应及时从 interest set 中移除, 比如 对于一个 channel 而言 connectable 事件发生一次后就不会再发生了,应 `key.interestOps() ^ SelectionKey.OP_CONNECT` 移除掉, 否则会导致 `selector.select()` 无限返回 0.
 

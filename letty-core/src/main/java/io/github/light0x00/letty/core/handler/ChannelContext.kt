@@ -1,6 +1,6 @@
 package io.github.light0x00.letty.core.handler
 
-import io.github.light0x00.letty.core.buffer.RecyclableByteBuffer
+import io.github.light0x00.letty.core.buffer.RecyclableBuffer
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask
 
 
@@ -11,7 +11,7 @@ import io.github.light0x00.letty.core.concurrent.ListenableFutureTask
 @JvmDefaultWithoutCompatibility
 interface ChannelContext {
 
-    fun allocateBuffer(capacity: Int): RecyclableByteBuffer
+    fun allocateBuffer(capacity: Int): RecyclableBuffer
 
     fun channel(): NioSocketChannel
 

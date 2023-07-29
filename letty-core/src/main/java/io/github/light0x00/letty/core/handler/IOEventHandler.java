@@ -3,8 +3,8 @@ package io.github.light0x00.letty.core.handler;
 import io.github.light0x00.letty.core.ChannelConfigurationProvider;
 import io.github.light0x00.letty.core.LettyConfig;
 import io.github.light0x00.letty.core.buffer.BufferPool;
-import io.github.light0x00.letty.core.buffer.RecyclableByteBuffer;
-import io.github.light0x00.letty.core.buffer.RingByteBuffer;
+import io.github.light0x00.letty.core.buffer.RecyclableBuffer;
+import io.github.light0x00.letty.core.buffer.RingBuffer;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.EventLoop;
 import io.github.light0x00.letty.core.eventloop.EventLoopGroup;
@@ -81,24 +81,33 @@ public class IOEventHandler implements EventHandler {
      * 用于反馈握手的结果
      */
     @Getter
-    protected final ListenableFutureTask<NioSocketChannel> connectFuture = new ListenableFutureTask<>(null);
+    protected final ListenableFutureTask<NioSocketChannel> connectableFuture;
 
     public ListenableFutureTask<Void> closedFuture() {
         return eventNotifier.closedFuture;
     }
 
-    public IOEventHandler(NioEventLoop eventLoop, SocketChannel channel, SelectionKey key, ChannelConfigurationProvider configProvider) {
+    public IOEventHandler(NioEventLoop eventLoop,
+                          SocketChannel channel,
+                          SelectionKey key,
+                          ChannelConfigurationProvider configProvider) {
+        this(eventLoop, channel, key, configProvider, new ListenableFutureTask<>(null));
+    }
+
+    public IOEventHandler(NioEventLoop eventLoop,
+                          SocketChannel channel,
+                          SelectionKey key,
+                          ChannelConfigurationProvider configProvider,
+                          ListenableFutureTask<NioSocketChannel> connectableFuture
+    ) {
         this.eventLoop = eventLoop;
         this.javaChannel = channel;
         this.key = key;
-
+        this.connectableFuture = connectableFuture;
         this.channel = channelDecorator();
-
-        //context
         context = buildContext();
 
         var configuration = configProvider.configuration(this.channel);
-
         lettyConf = configuration.lettyConf();
         bufferPool = configuration.bufferPool();
 
@@ -145,10 +154,10 @@ public class IOEventHandler implements EventHandler {
         try {
             javaChannel.finishConnect();
         } catch (IOException e) {
-            connectFuture.setFailure(e);
+            connectableFuture.setFailure(e);
             throw e;
         }
-        connectFuture.setSuccess();
+        connectableFuture.setSuccess(channel);
         eventNotifier.onConnected(context);
         key.interestOps((key.interestOps() ^ SelectionKey.OP_CONNECT) | SelectionKey.OP_READ);
     }
@@ -156,7 +165,7 @@ public class IOEventHandler implements EventHandler {
     private void processReadableEvent() throws IOException {
         int n;
         do {
-            RecyclableByteBuffer buf = bufferPool.take(lettyConf.readBufSize());
+            RecyclableBuffer buf = bufferPool.take(lettyConf.readBufSize());
             n = buf.readFromChannel(javaChannel);
             if (handlerExecutor.inEventLoop()) {
                 ioChain.input(buf);
@@ -174,7 +183,7 @@ public class IOEventHandler implements EventHandler {
     private void processWritableEvent() throws IOException {
         for (BufferFuturePair bufFuture; (bufFuture = outputBuffer.peek()) != null; ) {
 
-            RingByteBuffer buf = bufFuture.buffer();
+            RingBuffer buf = bufFuture.buffer();
             /*
              * Some types of channels, depending upon their state,
              * may write only some of the bytes or possibly none at all.
@@ -184,6 +193,10 @@ public class IOEventHandler implements EventHandler {
             buf.writeToChannel(javaChannel);
             if (buf.remainingCanGet() == 0) {
                 outputBuffer.poll();
+                if (buf instanceof RecyclableBuffer recyclable) {
+                    recyclable.release();
+                    log.debug("Recycle buffer {}", recyclable);
+                }
                 bufFuture.future.setSuccess();
             } else {
                 //如果还有剩余，意味 socket 发送缓冲着已经满了，只能等待下一次 Writable 事件
@@ -209,14 +222,14 @@ public class IOEventHandler implements EventHandler {
             throw new LettyException("Output closed");
         }
 
-        RingByteBuffer rBuf;
-        if (data instanceof RingByteBuffer) {
-            rBuf = (RingByteBuffer) data;
+        RingBuffer rBuf;
+        if (data instanceof RingBuffer) {
+            rBuf = (RingBuffer) data;
         } else if (data instanceof ByteBuffer bBuf) {
-            rBuf = new RingByteBuffer(bBuf, bBuf.position(), bBuf.position(), bBuf.limit(), true);
+            rBuf = new RingBuffer(bBuf, bBuf.position(), bBuf.position(), bBuf.limit(), true);
         } else if (data.getClass().equals(byte[].class)) {
             ByteBuffer bBuf = ByteBuffer.wrap((byte[]) data);
-            rBuf = new RingByteBuffer(bBuf, bBuf.position(), bBuf.position(), bBuf.limit(), true);
+            rBuf = new RingBuffer(bBuf, bBuf.position(), bBuf.position(), bBuf.limit(), true);
         } else {
             throw new LettyException("Unsupported data type to write:" + data.getClass());
         }
@@ -228,6 +241,11 @@ public class IOEventHandler implements EventHandler {
         if (rBuf.remainingCanGet() > 0) {
             outputBuffer.offer(new BufferFuturePair(rBuf, writeFuture));
             key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        } else {
+            if (rBuf instanceof RecyclableBuffer recyclable) {
+                recyclable.release();
+                log.debug("Recycle buffer {}", recyclable);
+            }
         }
         return writeFuture;
     }
@@ -368,13 +386,13 @@ public class IOEventHandler implements EventHandler {
 
             @NotNull
             @Override
-            public RecyclableByteBuffer allocateBuffer(int capacity) {
+            public RecyclableBuffer allocateBuffer(int capacity) {
                 return bufferPool.take(capacity);
             }
         };
     }
 
-    private record BufferFuturePair(RingByteBuffer buffer, ListenableFutureTask<Void> future) {
+    private record BufferFuturePair(RingBuffer buffer, ListenableFutureTask<Void> future) {
 
     }
 

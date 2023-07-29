@@ -1,7 +1,7 @@
 package io.github.light0x00.letty.core.handler;
 
-import io.github.light0x00.letty.core.buffer.RecyclableByteBuffer;
-import io.github.light0x00.letty.core.buffer.RingByteBuffer;
+import io.github.light0x00.letty.core.buffer.RecyclableBuffer;
+import io.github.light0x00.letty.core.buffer.RingBuffer;
 import io.github.light0x00.letty.core.handler.adapter.InboundChannelHandlerAdapter;
 
 import java.nio.ByteBuffer;
@@ -12,15 +12,15 @@ import java.nio.ByteBuffer;
  */
 public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter {
 
-    private final RingByteBuffer decodeBuf;
+    private final RingBuffer decodeBuf;
 
     public ByteToMessageDecoder(int bufSize) {
-        decodeBuf = new RingByteBuffer(ByteBuffer.allocate(bufSize));
+        decodeBuf = new RingBuffer(ByteBuffer.allocate(bufSize));
     }
 
     @Override
     public void onRead(ChannelContext context, Object data, InboundPipeline next) {
-        RecyclableByteBuffer srcBuf = (RecyclableByteBuffer) data;
+        RecyclableBuffer srcBuf = (RecyclableBuffer) data;
 
         while (srcBuf.remainingCanGet() > 0) {
             decodeBuf.put(srcBuf, Math.min(decodeBuf.remainingCanPut(), srcBuf.remainingCanGet()));
@@ -33,6 +33,6 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
         }
     }
 
-    protected abstract void decode(ChannelContext context, RingByteBuffer data, InboundPipeline next);
+    protected abstract void decode(ChannelContext context, RingBuffer data, InboundPipeline next);
 
 }

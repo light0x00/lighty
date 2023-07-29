@@ -1,7 +1,8 @@
 package io.github.light0x00.letty.core;
 
 
-import io.github.light0x00.letty.core.buffer.BufferPool;
+import io.github.light0x00.letty.core.buffer.DefaultBufferPool;
+import io.github.light0x00.letty.core.util.LettyException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -17,20 +18,22 @@ public class BufferPoolTest {
     public void testRecycleIdempotence() {
         AtomicInteger allocCount = new AtomicInteger();
 
-        var bufferPool = new BufferPool((c) -> {
+        var bufferPool = new DefaultBufferPool((c) -> {
             allocCount.incrementAndGet();
             return ByteBuffer.allocate(c);
         });
 
         var buf = bufferPool.take(4);
 
-        bufferPool.recycle(buf);
-        bufferPool.recycle(buf);
+        buf.release();
+        buf.release();
 
-        bufferPool.take(buf.capacity());
-        bufferPool.take(buf.capacity());
+        bufferPool.take(4);
+        bufferPool.take(4);
+
 
         Assertions.assertEquals(2, allocCount.get());
+        Assertions.assertThrows(LettyException.class, () -> buf.get());
     }
 
     /**
@@ -41,13 +44,13 @@ public class BufferPoolTest {
     public void testSlice() {
         AtomicInteger allocCount = new AtomicInteger();
 
-        var bufferPool = new BufferPool((c) -> {
+        var bufferPool = new DefaultBufferPool((c) -> {
             allocCount.incrementAndGet();
             return ByteBuffer.allocate(c);
         });
 
         var buf16 = bufferPool.take(16);
-        bufferPool.recycle(buf16);
+        buf16.release();
 
         var buf4 = bufferPool.take(4);
 

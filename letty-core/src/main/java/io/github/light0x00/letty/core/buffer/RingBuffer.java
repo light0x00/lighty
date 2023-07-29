@@ -1,6 +1,7 @@
 package io.github.light0x00.letty.core.buffer;
 
 import io.github.light0x00.letty.core.util.Tool;
+import lombok.AccessLevel;
 import lombok.Getter;
 
 import javax.annotation.Nonnull;
@@ -22,7 +23,8 @@ import java.util.Objects;
  * @since 2023/7/5
  */
 @NotThreadSafe
-public class RingByteBuffer {
+public class RingBuffer  {
+
 
     private final ByteBuffer buffer;
 
@@ -44,7 +46,7 @@ public class RingByteBuffer {
      * @param capacity      the size of the ring buffer, start with 0.
      * @param allUnRead     when the read and write position overlap, indicate that weather the ring buffer is full or empty.
      */
-    public RingByteBuffer(ByteBuffer buffer, int readPosition, int writePosition, int capacity, boolean allUnRead) {
+    public RingBuffer(ByteBuffer buffer, int readPosition, int writePosition, int capacity, boolean allUnRead) {
         if (capacity <= 0) {
             throw new IllegalArgumentException();
         }
@@ -70,7 +72,7 @@ public class RingByteBuffer {
     }
 
 
-    public RingByteBuffer(ByteBuffer buffer) {
+    public RingBuffer(ByteBuffer buffer) {
         this(buffer, 0, 0, buffer.capacity(), false);
     }
 
@@ -87,14 +89,14 @@ public class RingByteBuffer {
         return b;
     }
 
-    public RingByteBuffer get(byte[] dst) {
+    public RingBuffer get(byte[] dst) {
         return get(dst, 0, dst.length);
     }
 
     /**
      * @see ByteBuffer#get(byte[], int, int)
      */
-    public RingByteBuffer get(byte[] dst, int offset, int length) {
+    public RingBuffer get(byte[] dst, int offset, int length) {
         Objects.checkFromIndexSize(offset, length, dst.length);
 
         if (length > bytesUnRead) { //要读取的字节多余现有字节
@@ -112,7 +114,7 @@ public class RingByteBuffer {
     /**
      * @see ByteBuffer#put(byte)
      */
-    public RingByteBuffer put(final byte value) {
+    public RingBuffer put(final byte value) {
         if (bytesUnRead >= capacity) {
             throw new BufferOverflowException();
         }
@@ -122,14 +124,14 @@ public class RingByteBuffer {
         return this;
     }
 
-    public RingByteBuffer put(byte[] src) {
+    public RingBuffer put(byte[] src) {
         return put(src, 0, src.length);
     }
 
     /**
      * @see ByteBuffer#put(byte[], int, int)
      */
-    public RingByteBuffer put(byte[] src, int offset, int length) {
+    public RingBuffer put(byte[] src, int offset, int length) {
         Objects.checkFromIndexSize(offset, length, src.length);
 
         if (length > remainingCanPut()) { //要放入的字节多余剩余空间
@@ -146,7 +148,7 @@ public class RingByteBuffer {
     /**
      * @see ByteBuffer#put(ByteBuffer)
      */
-    public RingByteBuffer put(ByteBuffer src) {
+    public RingBuffer put(ByteBuffer src) {
         put(src, src.position(), src.remaining());
         src.position(src.position() + src.remaining());
         return this;
@@ -155,7 +157,7 @@ public class RingByteBuffer {
     /**
      * @implNote The positions of the src buffer are then incremented by length.
      */
-    public RingByteBuffer put(ByteBuffer src, int length) {
+    public RingBuffer put(ByteBuffer src, int length) {
         put(src, src.position(), length);
         src.position(src.position() + src.remaining());
         return this;
@@ -167,7 +169,7 @@ public class RingByteBuffer {
      * @throws ReadOnlyBufferException   If this buffer is read-only
      * @implNote The positions of the src buffer are unchanged.
      */
-    public RingByteBuffer put(ByteBuffer src, int offset, int length) {
+    public RingBuffer put(ByteBuffer src, int offset, int length) {
         Objects.checkFromIndexSize(offset, length, src.limit());
         if (length > remainingCanPut()) { //要放入的字节多余剩余空间
             throw new BufferOverflowException();
@@ -184,14 +186,14 @@ public class RingByteBuffer {
         return this;
     }
 
-    public RingByteBuffer put(RingByteBuffer src) {
+    public RingBuffer put(RingBuffer src) {
         return put(src, src.remainingCanGet());
     }
 
     /**
      * @implNote The positions of the src buffer are then incremented by length.
      */
-    public RingByteBuffer put(RingByteBuffer src, int length) {
+    public RingBuffer put(RingBuffer src, int length) {
         if (length <= 0) {
             throw new IndexOutOfBoundsException();
         }
@@ -266,6 +268,30 @@ public class RingByteBuffer {
         return 0;
     }
 
+    public int getInt() {
+        byte[] bytes = new byte[4];
+        get(bytes);
+        return Tool.bytesToInt(bytes);
+    }
+
+    public RingBuffer putInt(int value) {
+        return put(Tool.intToBytes(value));
+    }
+
+    public int remainingCanGet() {
+        return bytesUnRead;
+    }
+
+    public int remainingCanPut() {
+        return capacity - bytesUnRead;
+    }
+
+    public void clear() {
+        readPosition = 0;
+        writePosition = 0;
+        bytesUnRead = 0;
+    }
+
     private FragmentList readableFragments() {
         FragmentList fragments = new FragmentList();
         /*
@@ -335,30 +361,6 @@ public class RingByteBuffer {
         return fragments;
     }
 
-    public int getInt() {
-        byte[] bytes = new byte[4];
-        get(bytes);
-        return Tool.bytesToInt(bytes);
-    }
-
-    public RingByteBuffer putInt(int value) {
-        return put(Tool.intToBytes(value));
-    }
-
-    public int remainingCanGet() {
-        return bytesUnRead;
-    }
-
-    public int remainingCanPut() {
-        return capacity - bytesUnRead;
-    }
-
-    public void clear() {
-        readPosition = 0;
-        writePosition = 0;
-        bytesUnRead = 0;
-    }
-
     private int nextPosition(int position) {
         int next = position + 1;
         if (next == capacity) {
@@ -386,7 +388,7 @@ public class RingByteBuffer {
     /**
      * FIFO queue
      */
-    class FragmentList implements Iterable<Fragment> {
+    private class FragmentList implements Iterable<Fragment> {
         @Getter
         private int size;
         private final Fragment HEAD = new Fragment();
@@ -445,7 +447,7 @@ public class RingByteBuffer {
         }
     }
 
-    class Fragment {
+    private class Fragment {
 
         @Getter
         private int offset;
@@ -453,7 +455,7 @@ public class RingByteBuffer {
         @Getter
         private int length;
 
-        RingByteBuffer ring;
+        RingBuffer ring;
 
         Fragment next;
 
@@ -464,7 +466,7 @@ public class RingByteBuffer {
         Fragment(int offset, int length) {
             this.offset = offset;
             this.length = length;
-            this.ring = RingByteBuffer.this;
+            this.ring = RingBuffer.this;
         }
 
         /**

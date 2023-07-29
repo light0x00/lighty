@@ -2,6 +2,7 @@ package io.github.light0x00.letty.core.handler;
 
 import io.github.light0x00.letty.core.LettyConfig;
 import io.github.light0x00.letty.core.buffer.BufferPool;
+import io.github.light0x00.letty.core.buffer.DefaultBufferPool;
 import io.github.light0x00.letty.core.eventloop.EventLoopGroup;
 
 import javax.annotation.Nonnull;
@@ -26,7 +27,7 @@ public interface ChannelConfiguration {
     }
 
     default BufferPool bufferPool() {
-        return new BufferPool(ByteBuffer::allocateDirect);
+        return new DefaultBufferPool(ByteBuffer::allocateDirect);
     }
 
     @Nullable

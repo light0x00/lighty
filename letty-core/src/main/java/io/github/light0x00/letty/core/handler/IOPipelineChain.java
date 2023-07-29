@@ -1,6 +1,6 @@
 package io.github.light0x00.letty.core.handler;
 
-import io.github.light0x00.letty.core.buffer.RecyclableByteBuffer;
+import io.github.light0x00.letty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.EventLoop;
 import io.github.light0x00.letty.core.util.Skip;
@@ -65,7 +65,7 @@ public class IOPipelineChain {
                 .collect(Collectors.toList());
     }
 
-    public void input(RecyclableByteBuffer buf) {
+    public void input(RecyclableBuffer buf) {
         if (eventLoop.inEventLoop()) {
             inboundChain.invoke(buf);
         } else {

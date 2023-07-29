@@ -34,23 +34,12 @@ public class Client {
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
 
-        var connectedFuture = new ListenableFutureTask<NioSocketChannel>(null);
-
+        var connectableFuture = new ListenableFutureTask<NioSocketChannel>(null);
 
         NioEventLoop eventLoop = group.next();
         eventLoop.register(channel, SelectionKey.OP_CONNECT,
                         key -> {
-                            IOEventHandler eventHandler = new IOEventHandler(eventLoop, channel, key, channelConfigurationProvider);
-                            eventHandler.connectFuture().addListener(
-                                    e -> {
-                                        if (e.isSuccess()) {
-                                            connectedFuture.setSuccess(e.get());
-                                        } else {
-                                            connectedFuture.setFailure(e.cause());
-                                        }
-                                    }
-                            );
-                            return eventHandler;
+                            return new IOEventHandler(eventLoop, channel, key, channelConfigurationProvider, connectableFuture);
                         })
                 .addListener(new FutureListener<SelectionKey>() {
                     @SneakyThrows
@@ -61,7 +50,7 @@ public class Client {
                         channel.connect(address);
                     }
                 });
-        return connectedFuture;
+        return connectableFuture;
     }
 
 }

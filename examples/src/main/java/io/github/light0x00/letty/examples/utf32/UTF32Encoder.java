@@ -1,6 +1,6 @@
 package io.github.light0x00.letty.examples.utf32;
 
-import io.github.light0x00.letty.core.buffer.RecyclableByteBuffer;
+import io.github.light0x00.letty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.letty.core.handler.ChannelContext;
 import io.github.light0x00.letty.core.handler.OutboundPipeline;
 import io.github.light0x00.letty.core.handler.adapter.OutboundChannelHandlerAdapter;
@@ -20,7 +20,7 @@ public class UTF32Encoder extends OutboundChannelHandlerAdapter {
 
         int capacity = str.codePointCount(0, str.length()) * 4;
 
-        RecyclableByteBuffer buf = context.allocateBuffer(capacity);
+        RecyclableBuffer buf = context.allocateBuffer(capacity);
 
         str.codePoints().forEach(buf::putInt);
 

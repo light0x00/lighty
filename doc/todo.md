@@ -11,9 +11,8 @@
 - [ ] 责任链调用、观察者通知 支持按1对1指定 executor
 - [ ] ListenableFutureTask 需要拆分为接口和实现 ,为避免目前 `run` 方法暴露给用户,返回给用户的应为受限的代理对象,用户调用该对象的 `run` 将抛出异常  
 - [ ] Outbound Buffer 分离为单独组件, 内部统计字节数量
-- [ ] Outbound Buffer 读写锁优化
 - [x] 对比 close、shutdownInput、shutdownOutput 在 TCP 层面的区别
-- [ ] 解决优雅关闭 channel 时双向(input、output)检测,都 shutdown 时将 channel 的 key cancel 
+- [x] 解决优雅关闭 channel 时双向(input、output)检测,都 shutdown 时将 channel 的 key cancel 
 - [ ] 看 Netty shutdownGracefully 源码实现 (紧急)
-- [ ] 将生命周期的几个 future 移入 ChannelEventNotifier 类, 然后用用户的 executor 去执行, 而不是 event loop 线程 
+- [x] 将生命周期的几个 future 移入 ChannelEventNotifier 类, 然后用用户的 executor 去执行, 而不是 event loop 线程 
 - [ ] 调研 当 ServerSocketChannel cancel 后, 其 accept 的 SocketChannel 以及 SelectionKey 的状态, 考虑是否需要释放资源 [issue0001]
