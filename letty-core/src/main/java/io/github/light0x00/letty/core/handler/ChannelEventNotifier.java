@@ -6,7 +6,6 @@ import io.github.light0x00.letty.core.util.Skip;
 import io.github.light0x00.letty.core.util.Tool;
 import lombok.Getter;
 
-import java.nio.channels.SocketChannel;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,13 +24,18 @@ public class ChannelEventNotifier implements ChannelObserver {
     private final List<ChannelObserver> errorEventObservers;
 
     /**
-     * 两端关闭时({@link SocketChannel#shutdownInput()} ,{@link SocketChannel#shutdownOutput()}),或强制关闭时({@link SocketChannel#close()})触发
+     * Triggered when the connection established successfully
      */
     @Getter
-    protected final ListenableFutureTask<Void> closedFuture = new ListenableFutureTask<>(null);
+    protected final ListenableFutureTask<Void> connectedFuture;
+    /**
+     * Triggered when the connection closed.
+     */
+    @Getter
+    protected final ListenableFutureTask<Void> closedFuture;
 
     /**
-     * The event loop the observers are executed in
+     * The event loop the observers should be executed in
      */
     private EventLoop eventLoop;
 
@@ -41,6 +45,8 @@ public class ChannelEventNotifier implements ChannelObserver {
             List<OutboundChannelHandler> outboundPipelines) {
 
         this.eventLoop = eventLoop;
+        this.connectedFuture = new ListenableFutureTask<>(null);
+        this.closedFuture = new ListenableFutureTask<>(null);
 
         Set<ChannelObserver> observers = Stream.concat(inboundPipelines.stream(), outboundPipelines.stream())
                 .collect(Collectors.toSet()); //去重,主要是针对同时实现了 inbound、outbound 接口的 handler
@@ -78,10 +84,12 @@ public class ChannelEventNotifier implements ChannelObserver {
     @Override
     public void onConnected(ChannelContext context) {
         if (eventLoop.inEventLoop()) {
+            connectedFuture.setSuccess();
             for (ChannelObserver connectedEventObserver : connectedEventObservers) {
                 connectedEventObserver.onConnected(context);
             }
         } else {
+            eventLoop.execute(connectedFuture::setSuccess);
             for (ChannelObserver connectedEventObserver : connectedEventObservers) {
                 eventLoop.execute(() -> connectedEventObserver.onConnected(context));
             }

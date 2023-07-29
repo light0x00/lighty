@@ -14,6 +14,8 @@ interface NioSocketChannel {
 
     fun close(): ListenableFutureTask<Void>
 
+    fun connectedFuture(): ListenableFutureTask<Void>
+    
     fun closeFuture(): ListenableFutureTask<Void>
 
     fun shutdownOutput(): ListenableFutureTask<Void>

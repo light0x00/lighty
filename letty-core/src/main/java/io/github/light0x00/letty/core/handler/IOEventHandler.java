@@ -16,6 +16,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
@@ -78,14 +79,10 @@ public class IOEventHandler implements EventHandler {
     protected final ChannelEventNotifier eventNotifier;
 
     /**
-     * 用于反馈握手的结果
+     * 用于反馈握手的结果,成功或失败
      */
     @Getter
     protected final ListenableFutureTask<NioSocketChannel> connectableFuture;
-
-    public ListenableFutureTask<Void> closedFuture() {
-        return eventNotifier.closedFuture;
-    }
 
     public IOEventHandler(NioEventLoop eventLoop,
                           SocketChannel channel,
@@ -259,7 +256,7 @@ public class IOEventHandler implements EventHandler {
         eventNotifier.onReadCompleted(context);
 
         if (outputClosed) {
-            release();
+            onFinalized();
         } else if (!lettyConf.isAllowHalfClosure()) {
             shutdownOutput();
         }
@@ -300,7 +297,7 @@ public class IOEventHandler implements EventHandler {
         VarHandle.fullFence();
 
         if (inputClosed) {
-            release();
+            onFinalized();
         }
     }
 
@@ -326,11 +323,11 @@ public class IOEventHandler implements EventHandler {
         }
         outputClosed = inputClosed = true;
 
-        release();
+        onFinalized();
     }
 
     @SneakyThrows
-    private void release() {
+    private void onFinalized() {
         log.debug("Release resource {}", javaChannel);
 
         javaChannel.close();
@@ -344,8 +341,14 @@ public class IOEventHandler implements EventHandler {
 
             @NotNull
             @Override
+            public ListenableFutureTask<Void> connectedFuture() {
+                return IOEventHandler.this.eventNotifier.connectedFuture;
+            }
+
+            @NotNull
+            @Override
             public ListenableFutureTask<Void> closeFuture() {
-                return IOEventHandler.this.closedFuture();
+                return IOEventHandler.this.eventNotifier.closedFuture;
             }
 
             @NotNull
@@ -364,11 +367,11 @@ public class IOEventHandler implements EventHandler {
             @Override
             public ListenableFutureTask<Void> close() {
                 eventLoop.execute(IOEventHandler.this::close);
-                return IOEventHandler.this.closedFuture();
+                return closeFuture();
             }
 
             @Override
-            public ListenableFutureTask<Void> write(Object data) {
+            public ListenableFutureTask<Void> write(@Nonnull Object data) {
                 return ioChain.output(data);
             }
         };
@@ -420,7 +423,6 @@ public class IOEventHandler implements EventHandler {
             for (BufferFuturePair bufFuture; (bufFuture = outputBuffer.poll()) != null; ) {
                 bufFuture.future.setFailure(new LettyException("Output Buffer cleared"));
             }
-
         }
     }
 
