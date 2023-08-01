@@ -8,6 +8,6 @@ import org.slf4j.helpers.MessageFormatter
  */
 class LettyException(message: String?) : RuntimeException(message) {
 
-    constructor(pattern: String?, vararg args: String) : this(MessageFormatter.arrayFormat(pattern, args).message)
+    constructor(pattern: String?, vararg args: Any) : this(MessageFormatter.arrayFormat(pattern, args).message)
 
 }

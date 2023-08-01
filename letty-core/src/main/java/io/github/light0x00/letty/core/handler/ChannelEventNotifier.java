@@ -6,6 +6,7 @@ import io.github.light0x00.letty.core.util.Skip;
 import io.github.light0x00.letty.core.util.Tool;
 import lombok.Getter;
 
+import javax.annotation.concurrent.Immutable;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -15,6 +16,7 @@ import java.util.stream.Stream;
  * @author light0x00
  * @since 2023/7/10
  */
+@Immutable
 public class ChannelEventNotifier implements ChannelObserver {
 
     private final List<ChannelObserver> connectedEventObservers;
@@ -37,7 +39,7 @@ public class ChannelEventNotifier implements ChannelObserver {
     /**
      * The event loop the observers should be executed in
      */
-    private EventLoop eventLoop;
+    private final EventLoop eventLoop;
 
     public ChannelEventNotifier(
             EventLoop eventLoop,

@@ -123,7 +123,12 @@ public class NioEventLoop implements EventLoop {
                     log.warn("Channel has been closed");
                 }
                 SelectionKey key = channel.register(selector, interestOps);
-                key.attach(eventHandlerProvider.apply(key));
+                try {
+                    key.attach(eventHandlerProvider.apply(key));
+                } catch (Throwable th) {
+                    key.cancel();   //避免发生注册成功 但是
+                    throw th;
+                }
                 return key;
             }
         }, this);
@@ -161,12 +166,13 @@ public class NioEventLoop implements EventLoop {
         log.debug("Event loop started");
         workerThread = Thread.currentThread();
         while (!Thread.currentThread().isInterrupted()) {
-            Runnable c;
-            while ((c = tasks.poll()) != null) {
+            Runnable r;
+            while ((r = tasks.poll()) != null) {
                 try {
-                    c.run();
+                    r.run();
+                    processResultIfPossible(r);
                 } catch (Throwable th) {
-                    log.error("", th);  //TODO 交给异常捕获   issue0000
+                    log.error("Error occurred while process task", th);  //TODO 异常捕获   issue0000
                 }
             }
             selector.select();
@@ -178,7 +184,7 @@ public class NioEventLoop implements EventLoop {
                 try {
                     eventHandler.onEvent(key);
                 } catch (Throwable th) {
-                    log.error("Error occurred while process event", th); //TODO 交给异常捕获  issue0000
+                    log.error("Error occurred while process event", th); //TODO 异常捕获  issue0000
                     key.cancel();
                     key.channel().close();
                 }
@@ -186,6 +192,14 @@ public class NioEventLoop implements EventLoop {
             }
         }
         onTerminated();
+    }
+
+    private static void processResultIfPossible(Runnable r) throws Throwable {
+        if (r instanceof ListenableFutureTask<?> future) {
+            if (future.cause() != null) {
+                throw future.cause();
+            }
+        }
     }
 
     @SneakyThrows

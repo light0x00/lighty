@@ -1,6 +1,6 @@
 - BufferPool
-  - [ ] BufferPool 抽象
-  - [ ] BufferPool 的 DirectByteBuffer 的回收问题
+  - [x] BufferPool 抽象
+  - [x] BufferPool 的 DirectByteBuffer 的回收问题
   - [ ] BufferPool LRU
 - [ ] EventLoop shutdown
 - [ ] 异常处理,异常捕获, 需要考虑: 哪些异常应该转给用户? [issue0000] 
@@ -16,3 +16,4 @@
 - [ ] 看 Netty shutdownGracefully 源码实现 (紧急)
 - [x] 将生命周期的几个 future 移入 ChannelEventNotifier 类, 然后用用户的 executor 去执行, 而不是 event loop 线程 
 - [ ] 调研 当 ServerSocketChannel cancel 后, 其 accept 的 SocketChannel 以及 SelectionKey 的状态, 考虑是否需要释放资源 [issue0001]
+- [ ] 将 context 、channel、OutboundBuffer 的构造从 IOEventHandler 抽离

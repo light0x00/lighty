@@ -1,7 +1,8 @@
 package io.github.light0x00.letty.core.handler;
 
-import io.github.light0x00.letty.core.ChannelConfigurationProvider;
-import io.github.light0x00.letty.core.LettyConfig;
+import io.github.light0x00.letty.core.BasicNioSocketChannel;
+import io.github.light0x00.letty.core.LettyConfiguration;
+import io.github.light0x00.letty.core.LettyProperties;
 import io.github.light0x00.letty.core.buffer.BufferPool;
 import io.github.light0x00.letty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.letty.core.buffer.RingBuffer;
@@ -18,7 +19,6 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
@@ -44,7 +44,7 @@ public class IOEventHandler implements EventHandler {
 
     protected final BufferPool bufferPool;
 
-    protected final LettyConfig lettyConf;
+    protected final LettyProperties lettyConf;
 
     protected final SocketChannel javaChannel;
 
@@ -87,37 +87,43 @@ public class IOEventHandler implements EventHandler {
     public IOEventHandler(NioEventLoop eventLoop,
                           SocketChannel channel,
                           SelectionKey key,
-                          ChannelConfigurationProvider configProvider) {
-        this(eventLoop, channel, key, configProvider, new ListenableFutureTask<>(null));
+                          LettyConfiguration lettyConfiguration) {
+        this(eventLoop, channel, key, lettyConfiguration, new ListenableFutureTask<>(null));
     }
 
     public IOEventHandler(NioEventLoop eventLoop,
-                          SocketChannel channel,
+                          SocketChannel javaChannel,
                           SelectionKey key,
-                          ChannelConfigurationProvider configProvider,
+                          LettyConfiguration configProvider,
                           ListenableFutureTask<NioSocketChannel> connectableFuture
     ) {
         this.eventLoop = eventLoop;
-        this.javaChannel = channel;
+        this.javaChannel = javaChannel;
         this.key = key;
         this.connectableFuture = connectableFuture;
-        this.channel = channelDecorator();
+        channel = channelDecorator();
         context = buildContext();
-
-        var configuration = configProvider.configuration(this.channel);
-        lettyConf = configuration.lettyConf();
-        bufferPool = configuration.bufferPool();
+        lettyConf = configProvider.lettyProperties();
+        bufferPool = configProvider.bufferPool();
+        /*
+            Build pipeline and event notifier
+         */
+        ChannelHandlerConfiguration channelConfiguration = configProvider.handlerConfigurer().configure(new BasicNioSocketChannel(javaChannel));
 
         //determine executor
-        EventLoopGroup<?> handlerExecutorGroup = configuration.handlerExecutor();
+        EventLoopGroup<?> handlerExecutorGroup = channelConfiguration.handlerExecutor();
         if (handlerExecutorGroup == null || eventLoop.group() == handlerExecutorGroup) {
+            //如果没有单独指定 executor 去执行用户代码, 那么使用当前 event loop 执行.
             handlerExecutor = eventLoop;
         } else {
             handlerExecutor = handlerExecutorGroup.next();
         }
 
-        var inboundHandlers = configuration.inboundHandlers();
-        var outboundHandlers = configuration.outboundHandlers();
+        var inboundHandlers = channelConfiguration.inboundHandlers();
+        var outboundHandlers = channelConfiguration.outboundHandlers();
+
+        //init notifier for observers
+        eventNotifier = new ChannelEventNotifier(handlerExecutor, inboundHandlers, outboundHandlers);
 
         //init responsibility chain
         ioChain = new IOPipelineChain(handlerExecutor, context,
@@ -131,9 +137,6 @@ public class IOEventHandler implements EventHandler {
                         eventLoop.submit(() -> write(data, future));
                     }
                 });
-
-        //init notifier for observers
-        eventNotifier = new ChannelEventNotifier(handlerExecutor, inboundHandlers, outboundHandlers);
     }
 
     @Override
@@ -293,9 +296,6 @@ public class IOEventHandler implements EventHandler {
         javaChannel.shutdownOutput();
         log.debug("Send FIN to {}", javaChannel.getRemoteAddress());
 
-        //保证状态(outputClosed)的写 happens before 其他线程对状态(outputClosed)的读
-        VarHandle.fullFence();
-
         if (inputClosed) {
             onFinalized();
         }
@@ -336,8 +336,8 @@ public class IOEventHandler implements EventHandler {
         eventNotifier.onClosed(context);
     }
 
-    private AbstractNioSocketChannelImpl channelDecorator() {
-        return new AbstractNioSocketChannelImpl(javaChannel) {
+    private BasicNioSocketChannel channelDecorator() {
+        return new BasicNioSocketChannel(javaChannel) {
 
             @NotNull
             @Override

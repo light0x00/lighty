@@ -4,9 +4,9 @@ package io.github.light0x00.letty.core.buffer;
  * @author light0x00
  * @since 2023/7/27
  */
-public interface BufferPool {
+public abstract class BufferPool {
 
-    RecyclableBuffer take(int capacity);
+    public abstract RecyclableBuffer take(int capacity);
 
-    void recycle(RecyclableBuffer buffer);
+    protected abstract void recycle(RecyclableBuffer buffer);
 }

@@ -51,7 +51,6 @@ interface ChannelContext {
      * That's the reason why we need [nextContext]
      */
     fun nextContext(outboundPipeline: OutboundPipelineInvocation): ChannelContext {
-        val ref = this;
         //
         return object : ChannelContext by this {
             override fun channel(): NioSocketChannel {

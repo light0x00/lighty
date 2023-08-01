@@ -1,12 +1,13 @@
 package io.github.light0x00.letty.examples.utf32;
 
-import io.github.light0x00.letty.core.Client;
+import io.github.light0x00.letty.core.ChannelHandlerConfigurer;
+import io.github.light0x00.letty.core.ClientBootstrap;
 import io.github.light0x00.letty.core.concurrent.FutureListener;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.EventLoopGroup;
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup;
 import io.github.light0x00.letty.core.eventloop.SingleThreadExecutorGroup;
-import io.github.light0x00.letty.core.handler.ChannelConfiguration;
+import io.github.light0x00.letty.core.handler.ChannelHandlerConfiguration;
 import io.github.light0x00.letty.core.handler.InboundChannelHandler;
 import io.github.light0x00.letty.core.handler.NioSocketChannel;
 import io.github.light0x00.letty.core.handler.OutboundChannelHandler;
@@ -27,37 +28,16 @@ public class ClientSide {
     public static void main(String[] args) {
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("io"));
 
-        SingleThreadExecutorGroup singleThreadExecutorGroup = new SingleThreadExecutorGroup(2, new IdentifierThreadFactory("handler"));
 
-        Client client = new Client(eventLoopGroup,
-                channel -> new ChannelConfiguration() {
-
-                    @Nullable
+        ListenableFutureTask<NioSocketChannel> channelFuture = new ClientBootstrap()
+                .handlerConfigurer(new ChannelHandlerConfigurer() {
                     @Override
-                    public EventLoopGroup<?> handlerExecutor() {
-                        return singleThreadExecutorGroup;
+                    public ChannelHandlerConfiguration configure(NioSocketChannel channel) {
+                        return new MyChannelHandlerConfiguration();
                     }
-
-                    @Override
-                    public List<InboundChannelHandler> inboundHandlers() {
-                        return Arrays.asList(
-                                new UTF32Decoder(),
-                                new ClientMessageHandler()
-                        );
-                    }
-
-                    @Override
-                    public List<OutboundChannelHandler> outboundHandlers() {
-                        return Arrays.asList(
-                                new UTF32Encoder()
-                        );
-                    }
-
-                }
-        );
-
-        ListenableFutureTask<NioSocketChannel> channelFuture = client.connect(new InetSocketAddress("127.0.0.1", 9001));
-
+                })
+                .group(eventLoopGroup)
+                .connect(new InetSocketAddress("127.0.0.1", 9000));
         channelFuture.addListener(new FutureListener<NioSocketChannel>() {
             @Override
             public void operationComplete(ListenableFutureTask<NioSocketChannel> channelFuture) {
@@ -73,6 +53,35 @@ public class ClientSide {
             }
         });
 
+    }
+
+    private static class MyChannelHandlerConfiguration implements ChannelHandlerConfiguration {
+
+        SingleThreadExecutorGroup singleThreadExecutorGroup = new SingleThreadExecutorGroup(2, new IdentifierThreadFactory("handler"));
+
+        List<InboundChannelHandler> inboundHandlers = Arrays.asList(
+                new UTF32Decoder(),
+                new ClientMessageHandler()
+        );
+        List<OutboundChannelHandler> outboundHandlers = Arrays.asList(
+                new UTF32Encoder()
+        );
+
+        @Nullable
+        @Override
+        public EventLoopGroup<?> handlerExecutor() {
+            return singleThreadExecutorGroup;
+        }
+
+        @Override
+        public List<InboundChannelHandler> inboundHandlers() {
+            return inboundHandlers;
+        }
+
+        @Override
+        public List<OutboundChannelHandler> outboundHandlers() {
+            return outboundHandlers;
+        }
 
     }
 }

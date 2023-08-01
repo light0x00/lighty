@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Function;
 
-public class DefaultBufferPool implements BufferPool {
+public class DefaultBufferPool extends BufferPool {
 
     /**
      * 使用软引用,避免过多空闲的 buffer 导致 OOM , 作为兜底保障.
@@ -19,7 +19,7 @@ public class DefaultBufferPool implements BufferPool {
         this.bufferAllocator = byteBufferFactory;
     }
 
-    private ByteBuffer takeOriginalBuffer(int capacityAtLeast) {
+    private ByteBuffer take0(int capacityAtLeast) {
         synchronized (pool) {
             return pool.tailMap(capacityAtLeast)
                     .values()
@@ -39,28 +39,16 @@ public class DefaultBufferPool implements BufferPool {
 
     @Override
     public RecyclableBuffer take(int capacity) {
-        synchronized (pool) {
-            ByteBuffer buf = takeOriginalBuffer(capacity);
-            return new RecyclableBuffer(this, buf, 0, capacity);
-        }
+        ByteBuffer buf = take0(capacity);
+        return new RecyclableBuffer(this, buf, 0, capacity);
     }
 
     @Override
     public void recycle(RecyclableBuffer buffer) {
-        recycle(buffer.backingBuffer);
+        recycle0(buffer.backingBuffer);
     }
 
-    private static <T> T removeNextOrNullInSet(Set<T> set) {
-        Iterator<T> iterator = set.iterator();
-        if (iterator.hasNext()) {
-            T next = iterator.next();
-            iterator.remove();
-            return next;
-        }
-        return null;
-    }
-
-    private void recycle(ByteBuffer buffer) {
+    private void recycle0(ByteBuffer buffer) {
         synchronized (pool) {
             var ref = pool.get(buffer.capacity());
             //如果首次调用 get 对象存在,则应当附加一个强引用到该对象, 避免后续逻辑再次访问该对象时已被垃圾回收.
@@ -74,6 +62,16 @@ public class DefaultBufferPool implements BufferPool {
                 bufs.add(buffer);
             }
         }
+    }
+
+    private static <T> T removeNextOrNullInSet(Set<T> set) {
+        Iterator<T> iterator = set.iterator();
+        if (iterator.hasNext()) {
+            T next = iterator.next();
+            iterator.remove();
+            return next;
+        }
+        return null;
     }
 
 }

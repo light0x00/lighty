@@ -11,13 +11,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class RecyclableBuffer extends RingBuffer {
 
-    ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-    ReentrantReadWriteLock.ReadLock readLock = rwLock.readLock();
-    ReentrantReadWriteLock.WriteLock writeLock = rwLock.writeLock();
+    private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+    private ReentrantReadWriteLock.ReadLock readLock = rwLock.readLock();
+    private ReentrantReadWriteLock.WriteLock writeLock = rwLock.writeLock();
 
     BufferPool pool;
-
-    boolean hasReleased = false;
+    volatile boolean hasReleased = false;
     final ByteBuffer backingBuffer;
 
     public RecyclableBuffer(BufferPool pool, ByteBuffer originalBuffer, int offset, int length) {
@@ -26,14 +25,31 @@ public class RecyclableBuffer extends RingBuffer {
         this.backingBuffer = originalBuffer;
     }
 
-    public void release() {
+    private void ensureNotReleased() {
+        if (hasReleased) {
+            throw new LettyException("Buffer({}) has been released!", this.toString());
+        }
+    }
+
+    /**
+     * Mark as released, return true only for the first thread‘s invocation.
+     */
+    boolean markReleased() {
         try {
             writeLock.lock();
-            pool.recycle(this);
+            if (hasReleased) {
+                return false;
+            }
             hasReleased = true;
         } finally {
             writeLock.unlock();
         }
+        return true;
+    }
+
+    public void release() {
+        if (markReleased())
+            pool.recycle(this);
     }
 
     @Override
@@ -278,9 +294,4 @@ public class RecyclableBuffer extends RingBuffer {
         }
     }
 
-    private void ensureNotReleased() {
-        if (hasReleased) {
-            throw new LettyException("Buffer({}) has been released!", this.toString());
-        }
-    }
 }

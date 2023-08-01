@@ -1,14 +1,13 @@
 package io.github.light0x00.letty.examples.utf32;
 
-import io.github.light0x00.letty.core.Server;
+import io.github.light0x00.letty.core.ChannelHandlerConfigurer;
+import io.github.light0x00.letty.core.ServerBootstrap;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup;
-import io.github.light0x00.letty.core.handler.ChannelConfiguration;
-import io.github.light0x00.letty.core.handler.InboundChannelHandler;
-import io.github.light0x00.letty.core.handler.NioServerSocketChannel;
-import io.github.light0x00.letty.core.handler.OutboundChannelHandler;
+import io.github.light0x00.letty.core.handler.*;
 import io.github.light0x00.letty.examples.IdentifierThreadFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
@@ -24,27 +23,39 @@ public class ServerSide {
 
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("server"));
 
-        Server server = new Server(eventLoopGroup, channel -> new ChannelConfiguration() {
-            @Override
-            public List<InboundChannelHandler> inboundHandlers() {
-                return Arrays.asList(
-                        new UTF32Decoder(),
-                        new ServerMessageHandler()
-                );
-            }
+        ListenableFutureTask<NioServerSocketChannel> future = new ServerBootstrap()
+                .group(eventLoopGroup)
+                .handlerConfigurer(new MyChannelHandlerConfigurer())
+                .bind(new InetSocketAddress(9000));
 
-            @Override
-            public List<OutboundChannelHandler> outboundHandlers() {
-                return Arrays.asList(
-                        new UTF32Encoder()
-                );
-            }
-        });
-
-        ListenableFutureTask<NioServerSocketChannel> future = server.bind(new InetSocketAddress("127.0.0.1", 9001));
         NioServerSocketChannel channel = future.get(); //blocking
 
         log.info("server started!");
-        log.info(channel.getLocalAddress().toString());
+    }
+
+    private static class MyChannelHandlerConfigurer implements ChannelHandlerConfigurer {
+        @Override
+        public ChannelHandlerConfiguration configure(NioSocketChannel channel) {
+            return new ChannelHandlerConfiguration() {
+
+                @NotNull
+                @Override
+                public List<InboundChannelHandler> inboundHandlers() {
+                    return Arrays.asList(
+                            new UTF32Decoder(),
+                            new ServerMessageHandler()
+                    );
+                }
+
+                @NotNull
+                @Override
+                public List<OutboundChannelHandler> outboundHandlers() {
+                    return Arrays.asList(
+                            new UTF32Encoder()
+                    );
+                }
+
+            };
+        }
     }
 }
