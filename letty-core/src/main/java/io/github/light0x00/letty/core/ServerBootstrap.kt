@@ -12,6 +12,7 @@ import java.net.SocketAddress
 import java.net.StandardProtocolFamily
 import java.nio.channels.SelectionKey
 import java.nio.channels.ServerSocketChannel
+import java.util.function.Function
 
 /**
  * @author light0x00
@@ -81,13 +82,14 @@ class ServerBootstrap : AbstractBootstrap(), Loggable {
             val bindFuture = ListenableFutureTask<NioServerSocketChannel>(null)
             val eventLoop = parent.next()
 
-            eventLoop.register(ssc, SelectionKey.OP_ACCEPT, Acceptor(child, configuration))
-                .addListener { futureTask ->
-                    ssc.bind(address)
-                    log.debug("Listen on {}", address)
-                    val key = futureTask.get()
-                    bindFuture.setSuccess(NioServerSocketChannel(ssc, key, eventLoop))
-                }
+            eventLoop.register(ssc, SelectionKey.OP_ACCEPT) { key ->
+                Acceptor(ssc, key, child, configuration)
+            }.addListener { futureTask ->
+                ssc.bind(address)
+                log.debug("Listen on {}", address)
+                val key = futureTask.get()
+                bindFuture.setSuccess(NioServerSocketChannel(ssc, key, eventLoop))
+            }
             return bindFuture
         }
     }

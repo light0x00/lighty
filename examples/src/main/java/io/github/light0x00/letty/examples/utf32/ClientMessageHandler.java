@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 class ClientMessageHandler extends ChannelHandlerAdapter {
 
     @Override
-    public void onError(ChannelContext context, Throwable th) {
+    public void exceptionCaught(ChannelContext context, Throwable th) {
 
     }
 

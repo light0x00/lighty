@@ -2,7 +2,7 @@ package io.github.light0x00.letty.core.eventloop;
 
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.concurrent.RejectedExecutionHandler;
-import io.github.light0x00.letty.core.handler.EventHandler;
+import io.github.light0x00.letty.core.handler.ChannelEventHandler;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +21,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import static io.github.light0x00.letty.core.util.Tool.slf4jFormat;
+
 /**
  * @author light0x00
  * @since 2023/6/16
@@ -29,7 +31,7 @@ import java.util.function.Function;
 public class NioEventLoop implements EventExecutor {
 
     private static final int NOT_STARTED = 0;
-    private static final int STARTED = 1;
+    private static final int RUNNING = 1;
     private static final int TERMINATED = 2;
 
     private final Queue<Runnable> tasks = new ConcurrentLinkedDeque<>();
@@ -74,7 +76,7 @@ public class NioEventLoop implements EventExecutor {
     @Override
     public void execute(@Nonnull Runnable command) {
 
-        if (state.get() == NOT_STARTED && state.compareAndSet(NOT_STARTED, STARTED)) {
+        if (state.get() == NOT_STARTED && state.compareAndSet(NOT_STARTED, RUNNING)) {
             executor.execute(this::run);
         }
         /*
@@ -88,9 +90,9 @@ public class NioEventLoop implements EventExecutor {
          * 2.do
          * 3.recheck condition, then decide confirm or rollback
          * */
-        if (state.get() == STARTED) {
+        if (state.get() == RUNNING) {
             addTask(command, true);
-            if (state.get() != STARTED) {
+            if (state.get() != RUNNING) {
                 if (tasks.remove(command)) {
                     rejectedExecutionHandler.rejected(command, this);
                 }
@@ -101,7 +103,7 @@ public class NioEventLoop implements EventExecutor {
 
     }
 
-    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, EventHandler handler) {
+    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, ChannelEventHandler handler) {
         return register(channel, interestOps, (k) -> handler);
     }
 
@@ -111,8 +113,10 @@ public class NioEventLoop implements EventExecutor {
      * @implNote The listeners of the future returned, will be executed in event loop by default.
      * Be aware the concurrent race when change the executor.
      */
-    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, Function<SelectionKey, EventHandler> eventHandlerProvider) {
-        var future = new ListenableFutureTask<>(new Callable<SelectionKey>() {
+    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel,
+                                                       int interestOps,
+                                                       Function<SelectionKey, ChannelEventHandler> eventHandlerProvider) {
+        var registerFuture = new ListenableFutureTask<>(new Callable<SelectionKey>() {
             @Override
             @SneakyThrows
             public SelectionKey call() {
@@ -126,18 +130,18 @@ public class NioEventLoop implements EventExecutor {
                 try {
                     key.attach(eventHandlerProvider.apply(key));
                 } catch (Throwable th) {
-                    key.cancel();   //避免发生注册成功 但是
+                    key.cancel();   //避免发生注册成功, 但是 attachment 为空的情况
                     throw th;
                 }
                 return key;
             }
         }, this);
         if (inEventLoop()) {
-            future.run();
+            registerFuture.run();
         } else {
-            execute(future);
+            execute(registerFuture);
         }
-        return future;
+        return registerFuture;
     }
 
     public void wakeup() {
@@ -147,8 +151,8 @@ public class NioEventLoop implements EventExecutor {
     @Override
     public ListenableFutureTask<Void> shutdown() {
         if (state.compareAndSet(NOT_STARTED, TERMINATED)) {
-            onTerminated();
-        } else if (state.compareAndSet(STARTED, TERMINATED)) {
+            shutdownFuture.setSuccess();
+        } else if (state.compareAndSet(RUNNING, TERMINATED)) {
             //状态为 started 和 worker 开始运行之间存在时间差,
             //所以这里短暂自旋,等待 workerThread 被赋值
             while (workerThread == null) {
@@ -172,7 +176,7 @@ public class NioEventLoop implements EventExecutor {
                     r.run();
                     processResultIfPossible(r);
                 } catch (Throwable th) {
-                    log.error("Error occurred while process task", th);  //TODO 异常捕获   issue0000
+                    log.warn("Error occurred while process task", th);
                 }
             }
             selector.select();
@@ -180,20 +184,18 @@ public class NioEventLoop implements EventExecutor {
             Iterator<SelectionKey> it = events.iterator();
             while (it.hasNext()) {
                 SelectionKey key = it.next();
-                var eventHandler = (EventHandler) key.attachment();
+                var eventHandler = (ChannelEventHandler) key.attachment();
                 try {
                     eventHandler.onEvent(key);
                 } catch (Throwable th) {
-                    log.error("Error occurred while process event", th); //TODO 异常捕获  issue0000
-                    //TODO 回收动作执行
-                    key.cancel();
-                    key.channel().close();
+                    log.error("Error occurred while process event", th);
+                    invokeClose(eventHandler);
                 }
                 it.remove();
             }
         }
         onTerminated();
-        log.debug("Event loop terminated!");
+        log.debug("Event loop terminated");
     }
 
     private static void processResultIfPossible(Runnable r) throws Throwable {
@@ -206,9 +208,23 @@ public class NioEventLoop implements EventExecutor {
 
     @SneakyThrows
     private void onTerminated() {
+        for (SelectionKey key : selector.keys()) {
+            var handler = (ChannelEventHandler) key.attachment();
+            assert handler != null;
+            invokeClose(handler);
+        }
         selector.close();
-        shutdownFuture.run();
-        //TODO 关闭selector 中的 socket
+        log.debug("All the resource associated with event loop released");
+
+        shutdownFuture.setSuccess();
+    }
+
+    private static void invokeClose(ChannelEventHandler handler) {
+        try {
+            handler.close();
+        } catch (Throwable t) {
+            log.warn(slf4jFormat("An exception was thrown by handler's close: {}", handler), t);
+        }
     }
 
     @Override

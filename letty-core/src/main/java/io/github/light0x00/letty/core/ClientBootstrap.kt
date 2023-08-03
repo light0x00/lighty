@@ -3,7 +3,7 @@ package io.github.light0x00.letty.core
 import io.github.light0x00.letty.core.buffer.BufferPool
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup
-import io.github.light0x00.letty.core.handler.IOEventHandler
+import io.github.light0x00.letty.core.handler.SocketChannelEventHandler
 import io.github.light0x00.letty.core.handler.NioSocketChannel
 import io.github.light0x00.letty.core.util.LettyException
 import java.net.SocketAddress
@@ -69,7 +69,7 @@ class ClientBootstrap : AbstractBootstrap() {
             val eventLoop = group.next()
             eventLoop.register(channel, SelectionKey.OP_CONNECT,
                 Function { key: SelectionKey? ->
-                    IOEventHandler(
+                    SocketChannelEventHandler(
                         eventLoop, channel, key,
                         configuration, connectableFuture
                     )

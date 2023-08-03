@@ -3,7 +3,7 @@
   - [x] BufferPool 的 DirectByteBuffer 的回收问题
   - [x] BufferPool LRU
 - [ ] EventLoop shutdown
-- [ ] 异常处理,异常捕获, 需要考虑: 哪些异常应该转给用户? [issue0000] 
+- [x] 异常处理,异常捕获, 需要考虑: 哪些异常应该转给用户? [issue0000] 
 - [ ] 门面向 netty 对齐, 比如
   - 对用户不区分 inboundHandler、outboundHandler , 内部再区分, 
   - 比如设置 socket 的属性

@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * @since 2023/6/29
  */
 @Slf4j
-public class IOEventHandler implements EventHandler {
+public class SocketChannelEventHandler implements ChannelEventHandler {
 
     protected final NioEventLoop eventLoop;
 
@@ -82,30 +82,28 @@ public class IOEventHandler implements EventHandler {
     @Getter
     protected final ListenableFutureTask<NioSocketChannel> connectableFuture;
 
-    public IOEventHandler(NioEventLoop eventLoop,
-                          SocketChannel channel,
-                          SelectionKey key,
-                          LettyConfiguration lettyConfiguration) {
+    public SocketChannelEventHandler(NioEventLoop eventLoop,
+                                     SocketChannel channel,
+                                     SelectionKey key,
+                                     LettyConfiguration lettyConfiguration) {
         this(eventLoop, channel, key, lettyConfiguration, new ListenableFutureTask<>(null));
     }
 
-    public IOEventHandler(NioEventLoop eventLoop,
-                          SocketChannel javaChannel,
-                          SelectionKey key,
-                          LettyConfiguration configuration,
-                          ListenableFutureTask<NioSocketChannel> connectableFuture
+    public SocketChannelEventHandler(NioEventLoop eventLoop,
+                                     SocketChannel javaChannel,
+                                     SelectionKey key,
+                                     LettyConfiguration configuration,
+                                     ListenableFutureTask<NioSocketChannel> connectableFuture
     ) {
         this.eventLoop = eventLoop;
         this.javaChannel = javaChannel;
         this.key = key;
         this.connectableFuture = connectableFuture;
-        channel =  new NioSocketChannelImpl();
+        channel = new NioSocketChannelImpl();
         context = buildContext();
         lettyConf = configuration.lettyProperties();
         bufferPool = configuration.bufferPool();
-        /*
-            Build pipeline and event notifier
-         */
+
         ChannelHandlerConfiguration channelConfiguration = configuration.handlerConfigurer()
                 .configure(new BasicNioSocketChannel(javaChannel));
 
@@ -131,7 +129,6 @@ public class IOEventHandler implements EventHandler {
                     }
                 }
         );
-
     }
 
     @Override
@@ -303,7 +300,7 @@ public class IOEventHandler implements EventHandler {
      * <p>
      * Be aware that must be executed in curren event loop, cuz there is no any synchronization!
      */
-    private void close() {
+    public void close() {
 
         //幂等
         if (outputClosed && inputClosed) {
@@ -321,10 +318,12 @@ public class IOEventHandler implements EventHandler {
 
     @SneakyThrows
     private void onFinalized() {
-        log.debug("Release resource {}", javaChannel);
+        String name = javaChannel.toString();
 
         javaChannel.close();
         key.cancel();
+
+        log.debug("Release resource associated with channel {}", name);
 
         dispatcher.onClosed(context);
     }
@@ -337,31 +336,31 @@ public class IOEventHandler implements EventHandler {
 
         @Override
         public ListenableFutureTask<Void> connectedFuture() {
-            return IOEventHandler.this.dispatcher.connectedFuture;
+            return SocketChannelEventHandler.this.dispatcher.connectedFuture;
         }
 
         @Override
         public ListenableFutureTask<Void> closeFuture() {
-            return IOEventHandler.this.dispatcher.closedFuture;
+            return SocketChannelEventHandler.this.dispatcher.closedFuture;
         }
 
         @Override
         public ListenableFutureTask<Void> shutdownInput() {
             if (eventLoop.inEventLoop()) {
-                IOEventHandler.this.shutdownInput();
+                SocketChannelEventHandler.this.shutdownInput();
                 return ListenableFutureTask.successFuture();
             } else {
-                return eventLoop.submit(IOEventHandler.this::shutdownInput);
+                return eventLoop.submit(SocketChannelEventHandler.this::shutdownInput);
             }
         }
 
         @Override
         public ListenableFutureTask<Void> shutdownOutput() {
             if (eventLoop.inEventLoop()) {
-                IOEventHandler.this.shutdownOutput();
+                SocketChannelEventHandler.this.shutdownOutput();
                 return ListenableFutureTask.successFuture();
             } else {
-                return eventLoop.submit(IOEventHandler.this::shutdownOutput);
+                return eventLoop.submit(SocketChannelEventHandler.this::shutdownOutput);
 
             }
         }
@@ -369,9 +368,9 @@ public class IOEventHandler implements EventHandler {
         @Override
         public ListenableFutureTask<Void> close() {
             if (eventLoop.inEventLoop()) {
-                IOEventHandler.this.close();
+                SocketChannelEventHandler.this.close();
             } else {
-                eventLoop.execute(IOEventHandler.this::close);
+                eventLoop.execute(SocketChannelEventHandler.this::close);
             }
             return closeFuture();
         }

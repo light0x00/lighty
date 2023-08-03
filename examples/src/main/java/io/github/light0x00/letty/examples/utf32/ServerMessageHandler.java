@@ -13,8 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 class ServerMessageHandler extends ChannelHandlerAdapter {
 
     @Override
-    public void onError(ChannelContext context, Throwable th) {
-
+    public void exceptionCaught(ChannelContext context, Throwable th) {
+        log.info("exceptionCaught", th);
+        throw new RuntimeException("可爱的bug");
     }
 
     @Override
@@ -24,7 +25,8 @@ class ServerMessageHandler extends ChannelHandlerAdapter {
                         (f) -> context.channel().close()
                 );
 
-        context.channel().close();
+        throw new RuntimeException("无聊bug");
+
     }
 
     @Override
