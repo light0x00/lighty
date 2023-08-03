@@ -26,7 +26,7 @@ import java.util.function.Function;
  * @since 2023/6/16
  */
 @Slf4j
-public class NioEventLoop implements EventLoop {
+public class NioEventLoop implements EventExecutor {
 
     private static final int NOT_STARTED = 0;
     private static final int STARTED = 1;
@@ -185,6 +185,7 @@ public class NioEventLoop implements EventLoop {
                     eventHandler.onEvent(key);
                 } catch (Throwable th) {
                     log.error("Error occurred while process event", th); //TODO 异常捕获  issue0000
+                    //TODO 回收动作执行
                     key.cancel();
                     key.channel().close();
                 }
@@ -192,6 +193,7 @@ public class NioEventLoop implements EventLoop {
             }
         }
         onTerminated();
+        log.debug("Event loop terminated!");
     }
 
     private static void processResultIfPossible(Runnable r) throws Throwable {

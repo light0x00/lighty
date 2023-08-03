@@ -1,7 +1,7 @@
 package io.github.light0x00.letty.core.handler;
 
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
-import io.github.light0x00.letty.core.eventloop.EventLoop;
+import io.github.light0x00.letty.core.eventloop.EventExecutor;
 import io.github.light0x00.letty.core.util.Skip;
 import io.github.light0x00.letty.core.util.Tool;
 import lombok.Getter;
@@ -39,14 +39,14 @@ public class ChannelEventNotifier implements ChannelObserver {
     /**
      * The event loop the observers should be executed in
      */
-    private final EventLoop eventLoop;
+    private final EventExecutor eventExecutor;
 
     public ChannelEventNotifier(
-            EventLoop eventLoop,
+            EventExecutor eventExecutor,
             List<InboundChannelHandler> inboundPipelines,
             List<OutboundChannelHandler> outboundPipelines) {
 
-        this.eventLoop = eventLoop;
+        this.eventExecutor = eventExecutor;
         this.connectedFuture = new ListenableFutureTask<>(null);
         this.closedFuture = new ListenableFutureTask<>(null);
 
@@ -71,57 +71,57 @@ public class ChannelEventNotifier implements ChannelObserver {
     }
 
     @Override
-    public void onError(ChannelContext context, Throwable th) {
-        if (eventLoop.inEventLoop()) {
+    public void exceptionCaught(ChannelContext context, Throwable th) {
+        if (eventExecutor.inEventLoop()) {
             for (ChannelObserver errorEventObserver : errorEventObservers) {
-                errorEventObserver.onError(context, th);
+                errorEventObserver.exceptionCaught(context, th);
             }
         } else {
             for (ChannelObserver errorEventObserver : errorEventObservers) {
-                eventLoop.execute(() -> errorEventObserver.onError(context, th));
+                eventExecutor.execute(() -> errorEventObserver.exceptionCaught(context, th));
             }
         }
     }
 
     @Override
     public void onConnected(ChannelContext context) {
-        if (eventLoop.inEventLoop()) {
+        if (eventExecutor.inEventLoop()) {
             connectedFuture.setSuccess();
             for (ChannelObserver connectedEventObserver : connectedEventObservers) {
                 connectedEventObserver.onConnected(context);
             }
         } else {
-            eventLoop.execute(connectedFuture::setSuccess);
+            eventExecutor.execute(connectedFuture::setSuccess);
             for (ChannelObserver connectedEventObserver : connectedEventObservers) {
-                eventLoop.execute(() -> connectedEventObserver.onConnected(context));
+                eventExecutor.execute(() -> connectedEventObserver.onConnected(context));
             }
         }
     }
 
     @Override
     public void onReadCompleted(ChannelContext context) {
-        if (eventLoop.inEventLoop()) {
+        if (eventExecutor.inEventLoop()) {
             for (ChannelObserver readCompletedEventObserver : readCompletedEventObservers) {
                 readCompletedEventObserver.onReadCompleted(context);
             }
         } else {
             for (ChannelObserver readCompletedEventObserver : readCompletedEventObservers) {
-                eventLoop.execute(() -> readCompletedEventObserver.onReadCompleted(context));
+                eventExecutor.execute(() -> readCompletedEventObserver.onReadCompleted(context));
             }
         }
     }
 
     @Override
     public void onClosed(ChannelContext context) {
-        if (eventLoop.inEventLoop()) {
+        if (eventExecutor.inEventLoop()) {
             closedFuture.setSuccess();
             for (ChannelObserver closedEventObserver : closedEventObservers) {
                 closedEventObserver.onClosed(context);
             }
         } else {
-            eventLoop.execute(closedFuture::setSuccess);
+            eventExecutor.execute(closedFuture::setSuccess);
             for (ChannelObserver closedEventObserver : closedEventObservers) {
-                eventLoop.execute(() -> closedEventObserver.onClosed(context));
+                eventExecutor.execute(() -> closedEventObserver.onClosed(context));
             }
         }
     }

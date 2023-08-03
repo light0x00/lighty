@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  */
 @Slf4j
 @ThreadSafe
-public class SingleThreadExecutor implements EventLoop {
+public class SingleThreadExecutor implements EventExecutor {
 
     private static final int INITIAL = 0;
     private static final int READY = 1;

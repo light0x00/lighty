@@ -28,7 +28,7 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
             decode(context, decodeBuf, next);
 
             if (decodeBuf.remainingCanPut() == 0) {
-                throw new IllegalStateException("The decode buffer is full, but the decoder not read.");
+                throw new IllegalStateException("The decode buffer is full, but the decoder has not yet read it. ");
             }
         }
     }

@@ -109,8 +109,29 @@ for (SelectionKey selectionKey : selector.keys()) {
 selector.close();
 ```
 
-优雅的方式,
+### Netty shutdownGracefully 源码
 
-参考 Netty shutdownGracefully 源码
+当调用 `shutdownGracefully` 时, 内部会更改 EventLoop 线程的状态为关闭ing状态 `ST_SHUTTING_DOWN`, 然后 `wakeUp` 该线程.  
 
-事件循环总有要结束的时候, 当需要 
+处于关闭ing状态的事件循环(`NioEventLoop`)将不再接受新的任务,
+EventLoop 线程被唤醒(如果阻塞与 select 的话)后, 先执行`NioEventLoop#runAllTasks`消费完任务队列, 然后检测当前状态, 当判定为处于关闭状态(`ST_SHUTTING_DOWN`) 时, 会执行 `NioEventLoop#closeAll`, 该方法会将 selector 关联的所有 channel 关闭, 并释放相关资源, 比如:
+- OutboundBuffer 中尚未写完的数据将被取消
+- channel 的 closed 事件被执行
+- selectionKey 被 cancel 
+- pipeline 的 `fireChannelInactive` 被执行.
+
+
+## 异常捕获
+
+### Netty 中的异常捕获
+
+对于 `GenericFutureListener`, 如果执行回调时, 用户代码出现异常, Netty 只会打印一行 warn 级别的堆栈.
+> DefaultPromise#notifyListener0
+
+对于 `ChannelHandler` 的各个生命周期方法, 都会执行在 try/catch 中, 当某个 `ChannelHandler` 发生异常时, 将异常转给这个 handler 的 `exceptionCaught` .
+
+当 `exceptionCaught` 的执行也产生异常时, 那么打印一行 warn 日志.
+
+> `AbstractChannelHandlerContext#invokeExceptionCaught` 
+ 
+如果用户的 `ChannelHandler`, 没有重写 `exceptionCaught` 的话, 那么 `ChannelInboundHandlerAdapter` 的默认实现是传递给下一个(`ctx.fireExceptionCaught(cause);`), 最终传递给默认的异常处理 handler (`DefaultChannelPipeline`), 其实现是打印一行 warn 日志(`DefaultChannelPipeline#onUnhandledInboundException`).

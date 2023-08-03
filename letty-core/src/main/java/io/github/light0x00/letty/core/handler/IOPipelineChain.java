@@ -2,13 +2,12 @@ package io.github.light0x00.letty.core.handler;
 
 import io.github.light0x00.letty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
-import io.github.light0x00.letty.core.eventloop.EventLoop;
+import io.github.light0x00.letty.core.eventloop.EventExecutor;
 import io.github.light0x00.letty.core.util.Skip;
 import io.github.light0x00.letty.core.util.Tool;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 /**
@@ -22,31 +21,44 @@ public class IOPipelineChain {
 
     OutboundPipelineInvocation outboundChain;
 
-    EventLoop eventLoop;
+    EventExecutor eventExecutor;
 
     public IOPipelineChain(
-            EventLoop eventLoop,
+            EventExecutor eventExecutor,
             ChannelContext context,
             List<InboundChannelHandler> inboundHandlers,
             List<OutboundChannelHandler> outboundHandlers,
-            BiConsumer<Object, ListenableFutureTask<Void>> receiver) {
+            OutboundPipelineInvocation receiver) {
 
-        this.eventLoop = eventLoop;
+        this.eventExecutor = eventExecutor;
 
         inboundHandlers = filterInboundHandlers(inboundHandlers);
         outboundHandlers = filterOutboundHandlers(outboundHandlers);
 
-        if (inboundHandlers.isEmpty()) {
-            log.warn("There is no inbound handler!");
-        }
-        if (outboundHandlers.isEmpty()) {
-            log.warn("There is no outbound handler!");
-        }
-
         inboundChain = InboundPipelineInvocation.buildInvocationChain(
-                context, inboundHandlers);
+                context, inboundHandlers, arg -> {
+                    //the last phase
+                });
         outboundChain = OutboundPipelineInvocation.buildInvocationChain(
                 context, outboundHandlers, receiver);
+    }
+
+    public void input(RecyclableBuffer buf) {
+        if (eventExecutor.inEventLoop()) {
+            inboundChain.invoke(buf);
+        } else {
+            eventExecutor.execute(() -> inboundChain.invoke(buf));
+        }
+    }
+
+    public ListenableFutureTask<Void> output(Object data) {
+        var writeFuture = new ListenableFutureTask<Void>(null);
+        if (eventExecutor.inEventLoop()) {
+            outboundChain.invoke(data, writeFuture);
+        } else {
+            eventExecutor.execute(() -> outboundChain.invoke(data, writeFuture));
+        }
+        return writeFuture;
     }
 
     private static List<InboundChannelHandler> filterInboundHandlers(List<InboundChannelHandler> inboundHandlers) {
@@ -63,23 +75,5 @@ public class IOPipelineChain {
                         !Tool.methodExistAnnotation(Skip.class, ha.getClass(), "onWrite", ChannelContext.class, Object.class, OutboundPipeline.class)
                 )
                 .collect(Collectors.toList());
-    }
-
-    public void input(RecyclableBuffer buf) {
-        if (eventLoop.inEventLoop()) {
-            inboundChain.invoke(buf);
-        } else {
-            eventLoop.execute(() -> inboundChain.invoke(buf));
-        }
-    }
-
-    public ListenableFutureTask<Void> output(Object data) {
-        var writeFuture = new ListenableFutureTask<Void>(null);
-        if (eventLoop.inEventLoop()) {
-            outboundChain.invoke(data, writeFuture);
-        } else {
-            eventLoop.execute(() -> outboundChain.invoke(data, writeFuture));
-        }
-        return writeFuture;
     }
 }

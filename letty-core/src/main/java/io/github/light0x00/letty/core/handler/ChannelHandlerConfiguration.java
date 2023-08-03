@@ -9,7 +9,7 @@ import java.util.List;
 public interface ChannelHandlerConfiguration {
 
     @Nullable
-    default EventLoopGroup<?> handlerExecutor() {
+    default EventLoopGroup<?> executorGroup() {
         return null;
     }
 

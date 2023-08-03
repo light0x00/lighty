@@ -159,9 +159,19 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
 
     private void notifyListener(ListenerExecutorPair<T> pair) {
         if (pair.executor == null) {
-            pair.listener.operationComplete(this);
+            invokeListener(pair.listener);
         } else {
-            pair.executor.execute(() -> pair.listener.operationComplete(this));
+            pair.executor.execute(() -> invokeListener(pair.listener));
+        }
+    }
+
+    private void invokeListener(FutureListener<T> listener) {
+        try {
+            listener.operationComplete(this);
+        } catch (Throwable t) {
+            if (log.isWarnEnabled()) {
+                log.warn("An exception was thrown by " + listener.getClass().getName() + ".operationComplete()", t); //与 Netty DefaultPromise#notifyListener0 的处理一致
+            }
         }
     }
 
@@ -170,19 +180,25 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
     }
 
     public static <T> ListenableFutureTask<List<ListenableFutureTask<T>>> all(List<ListenableFutureTask<T>> tasks) {
-        ListenableFutureTask<List<ListenableFutureTask<T>>> listenableFutureTask = new ListenableFutureTask<>(
-                () -> tasks, null);
+        ListenableFutureTask<List<ListenableFutureTask<T>>> listenableFutureTask = new ListenableFutureTask<>(null);
 
-        CountDownLatch countDownLatch = new CountDownLatch(tasks.size());
+        CountDownLatch latch = new CountDownLatch(tasks.size());
         for (ListenableFutureTask<?> task : tasks) {
             task.addListener((f) -> {
-                countDownLatch.countDown();
-                if (countDownLatch.getCount() == 0) {
-                    listenableFutureTask.run();
+                latch.countDown();
+                if (latch.getCount() == 0) {
+                    listenableFutureTask.setSuccess(tasks);
                 }
             });
         }
 
         return listenableFutureTask;
     }
+
+    public static <T> ListenableFutureTask<T> successFuture(){
+        ListenableFutureTask<T> future = new ListenableFutureTask<>(null);
+        future.setSuccess();
+        return future;
+    }
+
 }

@@ -2,6 +2,7 @@ package io.github.light0x00.letty.core.handler
 
 import io.github.light0x00.letty.core.buffer.RecyclableBuffer
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask
+import javax.annotation.concurrent.ThreadSafe
 
 
 /**
@@ -9,6 +10,7 @@ import io.github.light0x00.letty.core.concurrent.ListenableFutureTask
  * @since 2023/6/28
  */
 @JvmDefaultWithoutCompatibility
+@ThreadSafe
 interface ChannelContext {
 
     fun allocateBuffer(capacity: Int): RecyclableBuffer
@@ -51,13 +53,16 @@ interface ChannelContext {
      * That's the reason why we need [nextContext]
      */
     fun nextContext(outboundPipeline: OutboundPipelineInvocation): ChannelContext {
-        //
+        //重写 context
         return object : ChannelContext by this {
             override fun channel(): NioSocketChannel {
-                //
+                //重写 channel
                 return object : NioSocketChannel by this@ChannelContext.channel() {
+                    /**
+                     * 重写 write 方法, 使之将数据传给后续 handler, 而不是回到第一个, 造成死循环
+                     */
                     override fun write(data: Any): ListenableFutureTask<Void> {
-                        val future = ListenableFutureTask<Void>(null)
+                        val future = ListenableFutureTask<Void>(null) //调用 context.write 视为一次全新的写, 所以这里不沿用原 future
                         outboundPipeline.invoke(data, future);
                         return future
                     }

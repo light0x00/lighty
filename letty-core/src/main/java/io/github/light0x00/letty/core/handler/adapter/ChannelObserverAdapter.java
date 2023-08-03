@@ -13,7 +13,7 @@ public abstract class ChannelObserverAdapter implements ChannelObserver {
     @Override
     @Skip
     public void onConnected(ChannelContext context) {
-
+        
     }
 
     @Override
@@ -30,7 +30,7 @@ public abstract class ChannelObserverAdapter implements ChannelObserver {
 
     @Override
     @Skip
-    public void onError(ChannelContext context, Throwable th) {
+    public void exceptionCaught(ChannelContext context, Throwable th) {
 
     }
 }

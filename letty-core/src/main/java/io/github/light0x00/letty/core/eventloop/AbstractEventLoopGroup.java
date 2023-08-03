@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
  * @since 2023/7/11
  */
 @Slf4j
-public abstract class AbstractEventLoopGroup<T extends EventLoop> implements EventLoopGroup<T> {
+public abstract class AbstractEventLoopGroup<T extends EventExecutor> implements EventLoopGroup<T> {
     private final T[] eventLoops;
 
     private final Chooser<T> eventExecutorChooser;
@@ -34,7 +34,7 @@ public abstract class AbstractEventLoopGroup<T extends EventLoop> implements Eve
     @SneakyThrows
     public AbstractEventLoopGroup(int threadNum, Executor executor) {
         //noinspection unchecked
-        eventLoops = (T[]) new EventLoop[2];
+        eventLoops = (T[]) new EventExecutor[2];
 
         for (int i = 0; i < threadNum; i++) {
             eventLoops[i] = newEventLoop(executor);
@@ -52,7 +52,7 @@ public abstract class AbstractEventLoopGroup<T extends EventLoop> implements Eve
     @Override
     public ListenableFutureTask<Void> shutdown() {
         List<ListenableFutureTask<Void>> shutdownFutures = Arrays.stream(eventLoops)
-                .map(EventLoop::shutdown)
+                .map(EventExecutor::shutdown)
                 .collect(Collectors.toList());
         ListenableFutureTask.all(shutdownFutures).addListener(f -> {
             List<ListenableFutureTask<Void>> futures = f.get();
