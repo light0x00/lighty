@@ -10,7 +10,6 @@ public class DefaultBufferPool extends BufferPool {
     /**
      * 使用软引用,避免过多空闲的 buffer 导致 OOM , 作为兜底保障.
      * <p>
-     * TODO 可引入 LRU/LFU 主动清理空闲的 buffer.
      */
     private final NavigableMap<Integer, SoftReference<Set<ByteBuffer>>> pool = new TreeMap<>();
     private final Function<Integer, ByteBuffer> bufferAllocator;

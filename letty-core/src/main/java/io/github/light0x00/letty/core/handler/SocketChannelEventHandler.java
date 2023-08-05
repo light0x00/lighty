@@ -12,6 +12,7 @@ import io.github.light0x00.letty.core.eventloop.EventLoopGroup;
 import io.github.light0x00.letty.core.eventloop.NioEventLoop;
 import io.github.light0x00.letty.core.handler.adapter.ChannelHandler;
 import io.github.light0x00.letty.core.util.LettyException;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,8 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Queue;
@@ -34,7 +37,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * @since 2023/6/29
  */
 @Slf4j
-public class SocketChannelEventHandler implements ChannelEventHandler {
+public class SocketChannelEventHandler implements NioEventHandler {
 
     protected final NioEventLoop eventLoop;
 
@@ -169,23 +172,23 @@ public class SocketChannelEventHandler implements ChannelEventHandler {
     }
 
     private void processWritableEvent() throws IOException {
-        for (BufferFuturePair bufFuture; (bufFuture = outputBuffer.peek()) != null; ) {
+        for (WriterFuturePair bufFuture; (bufFuture = outputBuffer.peek()) != null; ) {
 
-            RingBuffer buf = bufFuture.buffer();
+            WriteStrategy writer = bufFuture.writer();
             /*
              * Some types of channels, depending upon their state,
              * may write only some of the bytes or possibly none at all.
              * A socket channel in non-blocking mode, for example,
              * cannot write any more bytes than are free in the socket's output buffer.
              */
-            buf.writeToChannel(javaChannel);
-            if (buf.remainingCanGet() == 0) {
+            writer.write(javaChannel);
+            if (writer.remaining() == 0) {
                 outputBuffer.poll();
-                if (buf instanceof RecyclableBuffer recyclable) {
+                bufFuture.future.setSuccess();
+                if (writer.getSource() instanceof RecyclableBuffer recyclable) {
                     recyclable.release();
                     log.debug("Recycle buffer {}", recyclable);
                 }
-                bufFuture.future.setSuccess();
             } else {
                 //如果还有剩余，意味 socket 发送缓冲着已经满了，只能等待下一次 Writable 事件
                 log.debug("suspend writing socket buffer");
@@ -211,28 +214,29 @@ public class SocketChannelEventHandler implements ChannelEventHandler {
             return writeFuture;
         }
 
-        RingBuffer rBuf;
+        WriteStrategy rBuf;
         if (data instanceof RingBuffer) {
-            rBuf = (RingBuffer) data;
+            rBuf = new RingBufferWriteStrategy((RingBuffer) data);
         } else if (data instanceof ByteBuffer bBuf) {
-            rBuf = new RingBuffer(bBuf, bBuf.position(), bBuf.position(), bBuf.limit(), true);
+            rBuf = new ByteBufferWriteStrategy(bBuf);
         } else if (data.getClass().equals(byte[].class)) {
-            ByteBuffer bBuf = ByteBuffer.wrap((byte[]) data);
-            rBuf = new RingBuffer(bBuf, bBuf.position(), bBuf.position(), bBuf.limit(), true);
+            byte[] bBuf = (byte[]) data;
+            rBuf = new ByteBufferWriteStrategy(bBuf);
+        } else if (data instanceof FileChannel fc) {
+            rBuf = new FileChannelWriteStrategy(fc);
         } else {
             writeFuture.setFailure(new LettyException("Unsupported data type to write:" + data.getClass()));
             return writeFuture;
         }
 
-        //if output not fin, then write
         if (outputBuffer.isEmpty()) {
-            rBuf.writeToChannel(javaChannel);
+            rBuf.write(javaChannel);
         }
-        if (rBuf.remainingCanGet() > 0) {
-            outputBuffer.offer(new BufferFuturePair(rBuf, writeFuture));
+        if (rBuf.remaining() > 0) {
+            outputBuffer.offer(new WriterFuturePair(rBuf, writeFuture));
             key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         } else {
-            if (rBuf instanceof RecyclableBuffer recyclable) {
+            if (rBuf.getSource() instanceof RecyclableBuffer recyclable) {
                 recyclable.release();
                 log.debug("Recycle buffer {}", recyclable);
             }
@@ -399,22 +403,22 @@ public class SocketChannelEventHandler implements ChannelEventHandler {
         };
     }
 
-    private record BufferFuturePair(RingBuffer buffer, ListenableFutureTask<Void> future) {
+    private record WriterFuturePair(WriteStrategy writer, ListenableFutureTask<Void> future) {
 
     }
 
     public static class OutputBuffer {
-        private final Queue<BufferFuturePair> outputBuffer = new ConcurrentLinkedDeque<>();
+        private final Queue<WriterFuturePair> outputBuffer = new ConcurrentLinkedDeque<>();
 
-        public void offer(BufferFuturePair bf) {
+        public void offer(WriterFuturePair bf) {
             outputBuffer.offer(bf);
         }
 
-        public BufferFuturePair poll() {
+        public WriterFuturePair poll() {
             return outputBuffer.poll();
         }
 
-        public BufferFuturePair peek() {
+        public WriterFuturePair peek() {
             return outputBuffer.peek();
         }
 
@@ -424,9 +428,87 @@ public class SocketChannelEventHandler implements ChannelEventHandler {
 
         public void invalid() {
             log.debug("Clear outbound buffer ,remaining:{}", outputBuffer.size());
-            for (BufferFuturePair bufFuture; (bufFuture = outputBuffer.poll()) != null; ) {
+            for (WriterFuturePair bufFuture; (bufFuture = outputBuffer.poll()) != null; ) {
                 bufFuture.future.setFailure(new LettyException("Output Buffer cleared"));
             }
+        }
+    }
+
+    public interface WriteStrategy {
+        long write(GatheringByteChannel channel) throws IOException;
+
+        long remaining();
+
+        Object getSource();
+    }
+
+    @AllArgsConstructor
+    static class RingBufferWriteStrategy implements WriteStrategy {
+
+        private RingBuffer ringBuffer;
+
+        @Override
+        public long write(GatheringByteChannel channel) throws IOException {
+            return ringBuffer.writeToChannel(channel);
+        }
+
+        @Override
+        public long remaining() {
+            return ringBuffer.remainingCanGet();
+        }
+
+        @Override
+        public Object getSource() {
+            return ringBuffer;
+        }
+    }
+
+    @AllArgsConstructor
+    static class FileChannelWriteStrategy implements WriteStrategy {
+        private FileChannel fileChannel;
+
+        @Override
+        public long write(GatheringByteChannel channel) throws IOException {
+            return (int) fileChannel.transferTo(fileChannel.position(), fileChannel.size(), channel);
+        }
+
+        @SneakyThrows
+        @Override
+        public long remaining() {
+            return fileChannel.size() - fileChannel.position();
+        }
+
+        @Override
+        public Object getSource() {
+            return fileChannel;
+        }
+    }
+
+    static class ByteBufferWriteStrategy implements WriteStrategy {
+
+        private ByteBuffer buffer;
+
+        public ByteBufferWriteStrategy(byte[] arr) {
+            this.buffer = ByteBuffer.wrap(arr);
+        }
+
+        public ByteBufferWriteStrategy(ByteBuffer buffer) {
+            this.buffer = buffer;
+        }
+
+        @Override
+        public long write(GatheringByteChannel channel) throws IOException {
+            return channel.write(buffer);
+        }
+
+        @Override
+        public long remaining() {
+            return buffer.remaining();
+        }
+
+        @Override
+        public Object getSource() {
+            return buffer;
         }
     }
 

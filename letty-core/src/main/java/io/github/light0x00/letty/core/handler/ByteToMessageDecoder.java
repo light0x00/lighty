@@ -3,6 +3,7 @@ package io.github.light0x00.letty.core.handler;
 import io.github.light0x00.letty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.letty.core.buffer.RingBuffer;
 import io.github.light0x00.letty.core.handler.adapter.InboundChannelHandlerAdapter;
+import io.github.light0x00.letty.core.util.LettyException;
 
 import java.nio.ByteBuffer;
 
@@ -28,7 +29,7 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
             decode(context, decodeBuf, next);
 
             if (decodeBuf.remainingCanPut() == 0) {
-                throw new IllegalStateException("The decode buffer is full, but the decoder has not yet read it. ");
+                throw new LettyException("The decode buffer is full, but the decoder has not yet read it. ");
             }
         }
     }

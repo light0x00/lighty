@@ -2,7 +2,7 @@ package io.github.light0x00.letty.core.eventloop;
 
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.concurrent.RejectedExecutionHandler;
-import io.github.light0x00.letty.core.handler.ChannelEventHandler;
+import io.github.light0x00.letty.core.handler.NioEventHandler;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -103,7 +103,7 @@ public class NioEventLoop implements EventExecutor {
 
     }
 
-    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, ChannelEventHandler handler) {
+    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, NioEventHandler handler) {
         return register(channel, interestOps, (k) -> handler);
     }
 
@@ -115,7 +115,7 @@ public class NioEventLoop implements EventExecutor {
      */
     public ListenableFutureTask<SelectionKey> register(SelectableChannel channel,
                                                        int interestOps,
-                                                       Function<SelectionKey, ChannelEventHandler> eventHandlerProvider) {
+                                                       Function<SelectionKey, NioEventHandler> eventHandlerProvider) {
         var registerFuture = new ListenableFutureTask<>(new Callable<SelectionKey>() {
             @Override
             @SneakyThrows
@@ -184,10 +184,11 @@ public class NioEventLoop implements EventExecutor {
             Iterator<SelectionKey> it = events.iterator();
             while (it.hasNext()) {
                 SelectionKey key = it.next();
-                var eventHandler = (ChannelEventHandler) key.attachment();
+                var eventHandler = (NioEventHandler) key.attachment();
                 try {
                     eventHandler.onEvent(key);
                 } catch (Throwable th) {
+                    //这种异常正常只会来源于底层的错误, 属于不可预测的错误, 比如 Connect Refused.
                     log.error("Error occurred while process event", th);
                     invokeClose(eventHandler);
                 }
@@ -209,7 +210,7 @@ public class NioEventLoop implements EventExecutor {
     @SneakyThrows
     private void onTerminated() {
         for (SelectionKey key : selector.keys()) {
-            var handler = (ChannelEventHandler) key.attachment();
+            var handler = (NioEventHandler) key.attachment();
             assert handler != null;
             invokeClose(handler);
         }
@@ -219,7 +220,7 @@ public class NioEventLoop implements EventExecutor {
         shutdownFuture.setSuccess();
     }
 
-    private static void invokeClose(ChannelEventHandler handler) {
+    private static void invokeClose(NioEventHandler handler) {
         try {
             handler.close();
         } catch (Throwable t) {

@@ -15,7 +15,7 @@ import java.nio.channels.SocketChannel;
  * @since 2023/7/7
  */
 @Slf4j
-public class Acceptor implements ChannelEventHandler {
+public class Acceptor implements NioEventHandler {
 
     private SelectionKey key;
     private ServerSocketChannel channel;
@@ -39,7 +39,13 @@ public class Acceptor implements ChannelEventHandler {
         NioEventLoop eventLoop = workerGroup.next();
 
         eventLoop.register(incomingChannel, SelectionKey.OP_READ, (selectionKey) ->
-                new ServerSocketChannelEventHandler(eventLoop, incomingChannel, selectionKey, lettyConfiguration));
+                new SocketChannelEventHandler(eventLoop, incomingChannel, selectionKey, lettyConfiguration) {
+                    {
+                        dispatcher.onConnected(context);
+                        connectableFuture.setSuccess(channel);
+                    }
+                }
+        );
     }
 
     @SneakyThrows

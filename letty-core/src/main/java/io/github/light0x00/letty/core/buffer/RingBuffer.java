@@ -1,7 +1,6 @@
 package io.github.light0x00.letty.core.buffer;
 
 import io.github.light0x00.letty.core.util.Tool;
-import lombok.AccessLevel;
 import lombok.Getter;
 
 import javax.annotation.Nonnull;
@@ -24,7 +23,6 @@ import java.util.Objects;
  */
 @NotThreadSafe
 public class RingBuffer  {
-
 
     private final ByteBuffer buffer;
 

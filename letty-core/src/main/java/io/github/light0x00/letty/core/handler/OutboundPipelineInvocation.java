@@ -44,13 +44,15 @@ public interface OutboundPipelineInvocation {
                 pipeline.onWrite(
                         context.nextContext(next),
                         dataIn,
-                        (dataOut) -> next.invoke(dataOut, future)
+                        (dataOut) -> {
+                            next.invoke(dataOut, future);
+                            return future;
+                        }
                 );
             } catch (Throwable th) {
                 invokeExceptionCaught(th);
             }
         }
-
 
         void invokeExceptionCaught(Throwable cause) {
             try {
