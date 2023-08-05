@@ -15,8 +15,12 @@ abstract class AbstractBootstrap {
         val defaultBufferPool = LruBufferPool(DefaultByteBufferAllocator(), defaultProperties.bufferPoolMaxSize())
     }
 
-    protected fun buildConfiguration(lettyProperties: LettyProperties, bufferPool: BufferPool, handlerConfigurer: ChannelHandlerConfigurer): LettyConfiguration {
-        return object:LettyConfiguration{
+    protected fun buildConfiguration(
+        lettyProperties: LettyProperties,
+        bufferPool: BufferPool,
+        channelInitializer: ChannelInitializer
+    ): LettyConfiguration {
+        return object : LettyConfiguration {
             override fun lettyProperties(): LettyProperties {
                 return lettyProperties
             }
@@ -25,8 +29,8 @@ abstract class AbstractBootstrap {
                 return bufferPool;
             }
 
-            override fun handlerConfigurer(): ChannelHandlerConfigurer {
-                return handlerConfigurer
+            override fun channelInitializer(): ChannelInitializer {
+                return channelInitializer
             }
         }
     }

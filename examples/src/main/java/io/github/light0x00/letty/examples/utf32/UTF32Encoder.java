@@ -25,7 +25,7 @@ public class UTF32Encoder extends OutboundChannelHandlerAdapter {
         str.codePoints().forEach(buf::putInt);
 
         log.info("write");
-
+        //将
         context.channel().write(buf)
                 .addListener(
                         f -> {
@@ -37,7 +37,13 @@ public class UTF32Encoder extends OutboundChannelHandlerAdapter {
                         }
                 );
 
-        next.invoke(Tool.intToBytes("\n".codePointAt(0)));
+        next.invoke(Tool.intToBytes("\n".codePointAt(0)))
+                .addListener(
+                        f -> {
+                            log.info("write result:{}", f.isSuccess());
+                        }
+                )
+        ;
     }
 
 }

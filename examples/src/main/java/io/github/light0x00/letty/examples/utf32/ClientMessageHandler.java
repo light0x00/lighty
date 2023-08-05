@@ -2,7 +2,7 @@ package io.github.light0x00.letty.examples.utf32;
 
 import io.github.light0x00.letty.core.handler.ChannelContext;
 import io.github.light0x00.letty.core.handler.InboundPipeline;
-import io.github.light0x00.letty.core.handler.adapter.ChannelHandlerAdapter;
+import io.github.light0x00.letty.core.handler.adapter.DuplexChannelHandlerAdapter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
  * @since 2023/7/13
  */
 @Slf4j
-class ClientMessageHandler extends ChannelHandlerAdapter {
+class ClientMessageHandler extends DuplexChannelHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelContext context, Throwable th) {

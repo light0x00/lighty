@@ -1,6 +1,6 @@
-package io.github.light0x00.letty.core.handler;
+package io.github.light0x00.letty.core.handler.adapter;
 
-import static io.github.light0x00.letty.core.util.Tool.stackTraceToString;
+import io.github.light0x00.letty.core.handler.ChannelContext;
 
 /**
  * @author light0x00

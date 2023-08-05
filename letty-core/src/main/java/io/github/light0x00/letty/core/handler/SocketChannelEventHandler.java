@@ -1,6 +1,7 @@
 package io.github.light0x00.letty.core.handler;
 
-import io.github.light0x00.letty.core.BasicNioSocketChannel;
+import io.github.light0x00.letty.core.AbstractNioSocketChannel;
+import io.github.light0x00.letty.core.InitializingSocketChannel;
 import io.github.light0x00.letty.core.LettyConfiguration;
 import io.github.light0x00.letty.core.LettyProperties;
 import io.github.light0x00.letty.core.buffer.BufferPool;
@@ -10,7 +11,7 @@ import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.EventExecutor;
 import io.github.light0x00.letty.core.eventloop.EventLoopGroup;
 import io.github.light0x00.letty.core.eventloop.NioEventLoop;
-import io.github.light0x00.letty.core.handler.adapter.ChannelHandler;
+import io.github.light0x00.letty.core.handler.adapter.DuplexChannelHandler;
 import io.github.light0x00.letty.core.util.LettyException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -31,7 +32,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 /**
  * 基于责任链和观察者模式分发底层事件
  * <p>
- * handle the nio event and dispatch them to {@link ChannelHandler}
+ * handle the nio event and dispatch them to {@link DuplexChannelHandler}
  *
  * @author light0x00
  * @since 2023/6/29
@@ -107,8 +108,10 @@ public class SocketChannelEventHandler implements NioEventHandler {
         lettyConf = configuration.lettyProperties();
         bufferPool = configuration.bufferPool();
 
-        ChannelHandlerConfiguration channelConfiguration = configuration.handlerConfigurer()
-                .configure(new BasicNioSocketChannel(javaChannel));
+        var channelConfiguration = new InitializingSocketChannel(javaChannel);
+
+        configuration.channelInitializer()
+                .initChannel(channelConfiguration);
 
         //determine executor
         EventLoopGroup<?> handlerExecutorGroup = channelConfiguration.executorGroup();
@@ -122,8 +125,12 @@ public class SocketChannelEventHandler implements NioEventHandler {
         dispatcher = new ChannelHandlerDispatcher(
                 handlerExecutor,
                 context,
+                channelConfiguration.observers(),
                 channelConfiguration.inboundHandlers(),
                 channelConfiguration.outboundHandlers(),
+                (data) -> {
+                    log.warn("Discarded inbound message {} that reached at the tail of the pipeline. Please check your pipeline configuration.", data);
+                },
                 (data, future) -> {
                     if (eventLoop.inEventLoop()) {
                         write(data, future);
@@ -332,7 +339,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
         dispatcher.onClosed(context);
     }
 
-    class NioSocketChannelImpl extends BasicNioSocketChannel {
+    class NioSocketChannelImpl extends AbstractNioSocketChannel {
 
         public NioSocketChannelImpl() {
             super(javaChannel);

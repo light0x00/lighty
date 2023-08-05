@@ -1,21 +1,15 @@
 package io.github.light0x00.letty.examples.utf32;
 
-import io.github.light0x00.letty.core.ChannelHandlerConfigurer;
+import io.github.light0x00.letty.core.ChannelInitializer;
 import io.github.light0x00.letty.core.ClientBootstrap;
+import io.github.light0x00.letty.core.InitializingSocketChannel;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
-import io.github.light0x00.letty.core.eventloop.EventLoopGroup;
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup;
-import io.github.light0x00.letty.core.handler.ChannelHandlerConfiguration;
-import io.github.light0x00.letty.core.handler.InboundChannelHandler;
 import io.github.light0x00.letty.core.handler.NioSocketChannel;
-import io.github.light0x00.letty.core.handler.OutboundChannelHandler;
 import io.github.light0x00.letty.examples.IdentifierThreadFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * @author light0x00
@@ -27,10 +21,15 @@ public class ClientSide {
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("io"));
 
         ListenableFutureTask<NioSocketChannel> connectFuture = new ClientBootstrap()
-                .handlerConfigurer(new ChannelHandlerConfigurer() {
+                .channelInitializer(new ChannelInitializer() {
                     @Override
-                    public ChannelHandlerConfiguration configure(NioSocketChannel channel) {
-                        return new MyChannelHandlerConfiguration();
+                    public void initChannel(InitializingSocketChannel channel) {
+                        channel.executorGroup(eventLoopGroup);
+
+                        channel.pipeline().add(new UTF32Decoder());
+                        channel.pipeline().add(new ClientMessageHandler());
+                        channel.pipeline().add(new UTF32Encoder());
+
                     }
                 })
                 .group(eventLoopGroup)
@@ -44,33 +43,4 @@ public class ClientSide {
 
     }
 
-    private static class MyChannelHandlerConfiguration implements ChannelHandlerConfiguration {
-
-//        SingleThreadExecutorGroup singleThreadExecutorGroup = new SingleThreadExecutorGroup(2, new IdentifierThreadFactory("handler"));
-
-        List<InboundChannelHandler> inboundHandlers = Arrays.asList(
-                new UTF32Decoder(),
-                new ClientMessageHandler()
-        );
-        List<OutboundChannelHandler> outboundHandlers = Arrays.asList(
-                new UTF32Encoder()
-        );
-
-        @Nullable
-        @Override
-        public EventLoopGroup<?> executorGroup() {
-            return null;
-        }
-
-        @Override
-        public List<InboundChannelHandler> inboundHandlers() {
-            return inboundHandlers;
-        }
-
-        @Override
-        public List<OutboundChannelHandler> outboundHandlers() {
-            return outboundHandlers;
-        }
-
-    }
 }

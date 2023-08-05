@@ -1,10 +1,16 @@
 package io.github.light0x00.letty.examples.utf32;
 
 import io.github.light0x00.letty.core.ChannelHandlerConfigurer;
+import io.github.light0x00.letty.core.ChannelInitializer;
+import io.github.light0x00.letty.core.InitializingSocketChannel;
 import io.github.light0x00.letty.core.ServerBootstrap;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup;
-import io.github.light0x00.letty.core.handler.*;
+import io.github.light0x00.letty.core.handler.ChannelHandlerConfiguration;
+import io.github.light0x00.letty.core.handler.NioServerSocketChannel;
+import io.github.light0x00.letty.core.handler.NioSocketChannel;
+import io.github.light0x00.letty.core.handler.adapter.InboundChannelHandler;
+import io.github.light0x00.letty.core.handler.adapter.OutboundChannelHandler;
 import io.github.light0x00.letty.examples.IdentifierThreadFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -25,7 +31,17 @@ public class ServerSide {
 
         ListenableFutureTask<NioServerSocketChannel> future = new ServerBootstrap()
                 .group(eventLoopGroup)
-                .handlerConfigurer(new MyChannelHandlerConfigurer())
+                .channelInitializer(new ChannelInitializer() {
+                    @Override
+                    public void initChannel(InitializingSocketChannel channel) {
+                        channel.pipeline()
+                                .add(
+                                        new UTF32Decoder(),
+                                        new ServerMessageHandler(),
+                                        new UTF32Encoder()
+                                );
+                    }
+                })
                 .bind(new InetSocketAddress(9000));
 
         NioServerSocketChannel channel = future.get(); //blocking
@@ -33,29 +49,4 @@ public class ServerSide {
         log.info("server started!");
     }
 
-    private static class MyChannelHandlerConfigurer implements ChannelHandlerConfigurer {
-        @Override
-        public ChannelHandlerConfiguration configure(NioSocketChannel channel) {
-            return new ChannelHandlerConfiguration() {
-
-                @NotNull
-                @Override
-                public List<InboundChannelHandler> inboundHandlers() {
-                    return Arrays.asList(
-                            new UTF32Decoder(),
-                            new ServerMessageHandler()
-                    );
-                }
-
-                @NotNull
-                @Override
-                public List<OutboundChannelHandler> outboundHandlers() {
-                    return Arrays.asList(
-                            new UTF32Encoder()
-                    );
-                }
-
-            };
-        }
-    }
 }

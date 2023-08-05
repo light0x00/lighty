@@ -12,6 +12,8 @@ public interface LettyConfiguration {
 
     BufferPool bufferPool();
 
-    ChannelHandlerConfigurer handlerConfigurer();
+//    ChannelHandlerConfigurer handlerConfigurer();
+
+    ChannelInitializer channelInitializer();
 
 }

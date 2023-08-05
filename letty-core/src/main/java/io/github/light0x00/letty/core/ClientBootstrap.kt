@@ -3,8 +3,8 @@ package io.github.light0x00.letty.core
 import io.github.light0x00.letty.core.buffer.BufferPool
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup
-import io.github.light0x00.letty.core.handler.SocketChannelEventHandler
 import io.github.light0x00.letty.core.handler.NioSocketChannel
+import io.github.light0x00.letty.core.handler.SocketChannelEventHandler
 import io.github.light0x00.letty.core.util.LettyException
 import java.net.SocketAddress
 import java.nio.channels.SelectionKey
@@ -18,7 +18,7 @@ import java.util.function.Function
 class ClientBootstrap : AbstractBootstrap() {
 
     private var group: NioEventLoopGroup? = null
-    private var handlerConfigurer: ChannelHandlerConfigurer? = null
+    private var channelInitializer: ChannelInitializer? = null
     private var properties: LettyProperties? = null
     private var bufferPool: BufferPool? = null
 
@@ -27,8 +27,8 @@ class ClientBootstrap : AbstractBootstrap() {
         return this
     }
 
-    fun handlerConfigurer(handlerConfigurer: ChannelHandlerConfigurer): ClientBootstrap {
-        this.handlerConfigurer = handlerConfigurer;
+    fun channelInitializer(channelInitializer: ChannelInitializer): ClientBootstrap {
+        this.channelInitializer = channelInitializer;
         return this
     }
 
@@ -53,11 +53,11 @@ class ClientBootstrap : AbstractBootstrap() {
         if (bufferPool == null) {
             bufferPool = defaultBufferPool
         }
-        if (handlerConfigurer == null) {
+        if (channelInitializer == null) {
             throw LettyException("handlerConfigurer not set")
         }
 
-        return Client(group!!, buildConfiguration(properties!!, bufferPool!!, handlerConfigurer!!)).connect(address)
+        return Client(group!!, buildConfiguration(properties!!, bufferPool!!, channelInitializer!!)).connect(address)
     }
 
     class Client(private val group: NioEventLoopGroup, private var configuration: LettyConfiguration) {

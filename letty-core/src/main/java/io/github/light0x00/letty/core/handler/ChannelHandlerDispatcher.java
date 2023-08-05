@@ -3,16 +3,18 @@ package io.github.light0x00.letty.core.handler;
 import io.github.light0x00.letty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.EventExecutor;
+import io.github.light0x00.letty.core.handler.adapter.ChannelObserver;
+import io.github.light0x00.letty.core.handler.adapter.InboundChannelHandler;
+import io.github.light0x00.letty.core.handler.adapter.OutboundChannelHandler;
 import io.github.light0x00.letty.core.util.Skip;
 import io.github.light0x00.letty.core.util.Tool;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static io.github.light0x00.letty.core.util.Tool.stackTraceToString;
 
@@ -26,11 +28,11 @@ public class ChannelHandlerDispatcher {
 
     OutboundPipelineInvocation outboundChain;
 
-    private final List<ChannelObserver> connectedEventObservers;
+    private final List<? extends ChannelObserver> connectedEventObservers;
 
-    private final List<ChannelObserver> readCompletedEventObservers;
+    private final List<? extends ChannelObserver> readCompletedEventObservers;
 
-    private final List<ChannelObserver> closedEventObservers;
+    private final List<? extends ChannelObserver> closedEventObservers;
 
     /**
      * Triggered when the connection established successfully
@@ -47,29 +49,36 @@ public class ChannelHandlerDispatcher {
 
     public ChannelHandlerDispatcher(EventExecutor eventExecutor,
                                     ChannelContext context,
-                                    List<InboundChannelHandler> inboundHandlers,
-                                    List<OutboundChannelHandler> outboundHandlers,
-                                    OutboundPipelineInvocation receiver
+                                    Collection<? extends ChannelObserver> observers,
+                                    List<? extends InboundChannelHandler> inboundHandlers,
+                                    List<? extends OutboundChannelHandler> outboundHandlers,
+                                    InboundPipelineInvocation inboundReceiver,
+                                    OutboundPipelineInvocation outboundReceiver
     ) {
         this.eventExecutor = eventExecutor;
         this.connectedFuture = new ListenableFutureTask<>(null);
         this.closedFuture = new ListenableFutureTask<>(null);
+//
+//        Set<ChannelObserver> observers =
+//                Stream.concat(extObservers.stream(),
+//                        Stream.concat(inboundHandlers.stream(), outboundHandlers.stream())
+//                ).collect(Collectors.toSet()); //去重,主要是针对同时实现了 inbound、outbound 接口的 handler
 
-        Set<ChannelObserver> observers = Stream.concat(inboundHandlers.stream(), outboundHandlers.stream())
-                .collect(Collectors.toSet()); //去重,主要是针对同时实现了 inbound、outbound 接口的 handler
+        inboundHandlers = inboundHandlers.stream().filter(
+                h -> !Tool.getMethod(h, "onRead", ChannelContext.class, Object.class, InboundPipeline.class)
+                        .isAnnotationPresent(Skip.class)
+        ).toList();
 
-        inboundHandlers = filter(inboundHandlers, ha ->
-                !InboundChannelHandler.getOnReadMethod(ha).isAnnotationPresent(Skip.class));
-
-        outboundHandlers = filter(outboundHandlers, ha ->
-                !OutboundChannelHandler.getMethodOnWrite(ha).isAnnotationPresent(Skip.class));
+        outboundHandlers = outboundHandlers.stream().filter(
+                h -> !Tool.getMethod(h, "onWrite", ChannelContext.class, Object.class, OutboundPipeline.class)
+                        .isAnnotationPresent(Skip.class)
+        ).toList();
 
         inboundChain = InboundPipelineInvocation.buildInvocationChain(
-                context, inboundHandlers, arg -> {
-                    //the last phase
-                });
+                context, inboundHandlers, inboundReceiver);
+
         outboundChain = OutboundPipelineInvocation.buildInvocationChain(
-                context, outboundHandlers, receiver);
+                context, outboundHandlers, outboundReceiver);
 
         connectedEventObservers = observers.stream().filter(
                 it -> !Tool.getMethod(it, "onConnected", ChannelContext.class)

@@ -1,23 +1,35 @@
 package io.github.light0x00.letty.core.handler.adapter;
 
-import io.github.light0x00.letty.core.handler.*;
+import io.github.light0x00.letty.core.handler.ChannelContext;
 import io.github.light0x00.letty.core.util.Skip;
 
 /**
  * @author light0x00
  * @since 2023/7/4
  */
-public abstract class ChannelHandlerAdapter extends ChannelObserverAdapter implements InboundChannelHandler, OutboundChannelHandler {
+public abstract class ChannelHandlerAdapter implements ChannelObserver {
 
     @Override
     @Skip
-    public void onRead(ChannelContext context, Object data, InboundPipeline next) {
+    public void onConnected(ChannelContext context) {
+        
+    }
+
+    @Override
+    @Skip
+    public void onReadCompleted(ChannelContext context) {
 
     }
 
     @Override
     @Skip
-    public void onWrite(ChannelContext context, Object data, OutboundPipeline next) {
+    public void onClosed(ChannelContext context) {
+
+    }
+
+    @Override
+    @Skip
+    public void exceptionCaught(ChannelContext context, Throwable th) {
 
     }
 }

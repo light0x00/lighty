@@ -1,6 +1,7 @@
 package io.github.light0x00.letty.core.handler;
 
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
+import io.github.light0x00.letty.core.handler.adapter.OutboundChannelHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -10,7 +11,7 @@ import static io.github.light0x00.letty.core.util.Tool.stackTraceToString;
 public interface OutboundPipelineInvocation {
 
     static OutboundPipelineInvocation buildInvocationChain(ChannelContext context,
-                                                           List<OutboundChannelHandler> pipelines,
+                                                           List<? extends OutboundChannelHandler> pipelines,
                                                            OutboundPipelineInvocation receiver
     ) {
         OutboundPipelineInvocation invocation = receiver;

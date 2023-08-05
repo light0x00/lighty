@@ -12,7 +12,6 @@ import java.net.SocketAddress
 import java.net.StandardProtocolFamily
 import java.nio.channels.SelectionKey
 import java.nio.channels.ServerSocketChannel
-import java.util.function.Function
 
 /**
  * @author light0x00
@@ -22,7 +21,9 @@ class ServerBootstrap : AbstractBootstrap(), Loggable {
 
     private var acceptorGroup: NioEventLoopGroup? = null
     private var workerGroup: NioEventLoopGroup? = null
-    private var handlerConfigurer: ChannelHandlerConfigurer? = null
+
+    //    private var handlerConfigurer: ChannelHandlerConfigurer? = null
+    private var channelInitializer: ChannelInitializer? = null
     private var properties: LettyProperties? = null
     private var bufferPool: BufferPool? = null
 
@@ -38,8 +39,8 @@ class ServerBootstrap : AbstractBootstrap(), Loggable {
         return this
     }
 
-    fun handlerConfigurer(handlerConfigurer: ChannelHandlerConfigurer): ServerBootstrap {
-        this.handlerConfigurer = handlerConfigurer;
+    fun channelInitializer(channelInitializer: ChannelInitializer): ServerBootstrap {
+        this.channelInitializer = channelInitializer;
         return this
     }
 
@@ -60,13 +61,13 @@ class ServerBootstrap : AbstractBootstrap(), Loggable {
         if (bufferPool == null) {
             bufferPool = defaultBufferPool
         }
-        if (handlerConfigurer == null) {
-            throw LettyException("handlerConfigurer not set")
+        if (channelInitializer == null) {
+            throw LettyException("channelInitializer not set")
         }
         if (acceptorGroup == null || workerGroup == null) {
             throw LettyException("group not set")
         }
-        val configuration = buildConfiguration(properties!!, bufferPool!!, handlerConfigurer!!)
+        val configuration = buildConfiguration(properties!!, bufferPool!!, channelInitializer!!)
         return Server(acceptorGroup!!, workerGroup!!, configuration)
             .bind(address)
     }
