@@ -75,8 +75,8 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
     }
 
     @SneakyThrows
-    public void sync(){
-        super.get();
+    public T sync(){
+        return super.get();
     }
 
     public void setSuccess() {

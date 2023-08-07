@@ -15,7 +15,7 @@ interface NioSocketChannel {
     fun close(): ListenableFutureTask<Void>
 
     fun connectedFuture(): ListenableFutureTask<Void>
-    
+
     fun closeFuture(): ListenableFutureTask<Void>
 
     fun shutdownOutput(): ListenableFutureTask<Void>
@@ -27,4 +27,5 @@ interface NioSocketChannel {
     fun remoteAddress(): SocketAddress
 
     fun <T> setOption(name: SocketOption<T>, v: T)
+    fun <T> getOption(name: SocketOption<T>): T
 }

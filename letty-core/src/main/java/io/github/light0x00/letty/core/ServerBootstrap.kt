@@ -3,6 +3,7 @@ package io.github.light0x00.letty.core
 import io.github.light0x00.letty.core.buffer.BufferPool
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup
+import io.github.light0x00.letty.core.facade.ChannelInitializer
 import io.github.light0x00.letty.core.handler.Acceptor
 import io.github.light0x00.letty.core.handler.NioServerSocketChannel
 import io.github.light0x00.letty.core.util.LettyException
@@ -17,15 +18,10 @@ import java.nio.channels.ServerSocketChannel
  * @author light0x00
  * @since 2023/7/10
  */
-class ServerBootstrap : AbstractBootstrap(), Loggable {
+class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
 
     private var acceptorGroup: NioEventLoopGroup? = null
     private var workerGroup: NioEventLoopGroup? = null
-
-    //    private var handlerConfigurer: ChannelHandlerConfigurer? = null
-    private var channelInitializer: ChannelInitializer? = null
-    private var properties: LettyProperties? = null
-    private var bufferPool: BufferPool? = null
 
     fun group(group: NioEventLoopGroup): ServerBootstrap {
         this.acceptorGroup = group
@@ -39,35 +35,11 @@ class ServerBootstrap : AbstractBootstrap(), Loggable {
         return this
     }
 
-    fun channelInitializer(channelInitializer: ChannelInitializer): ServerBootstrap {
-        this.channelInitializer = channelInitializer;
-        return this
-    }
-
-    fun properties(properties: LettyProperties): ServerBootstrap {
-        this.properties = properties
-        return this
-    }
-
-    fun bufferPool(pool: BufferPool): ServerBootstrap {
-        this.bufferPool = pool;
-        return this
-    }
-
     fun bind(address: SocketAddress): ListenableFutureTask<NioServerSocketChannel> {
-        if (properties == null) {
-            properties = defaultProperties
-        }
-        if (bufferPool == null) {
-            bufferPool = defaultBufferPool
-        }
-        if (channelInitializer == null) {
-            throw LettyException("channelInitializer not set")
-        }
         if (acceptorGroup == null || workerGroup == null) {
             throw LettyException("group not set")
         }
-        val configuration = buildConfiguration(properties!!, bufferPool!!, channelInitializer!!)
+        val configuration = buildConfiguration()
         return Server(acceptorGroup!!, workerGroup!!, configuration)
             .bind(address)
     }
@@ -96,5 +68,4 @@ class ServerBootstrap : AbstractBootstrap(), Loggable {
     }
 
 }
-
 

@@ -1,8 +1,8 @@
 package io.github.light0x00.letty.examples.utf32;
 
-import io.github.light0x00.letty.core.ChannelInitializer;
+import io.github.light0x00.letty.core.facade.ChannelInitializer;
 import io.github.light0x00.letty.core.ClientBootstrap;
-import io.github.light0x00.letty.core.InitializingSocketChannel;
+import io.github.light0x00.letty.core.facade.InitializingSocketChannel;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup;
 import io.github.light0x00.letty.core.handler.NioSocketChannel;
@@ -16,7 +16,7 @@ import java.net.InetSocketAddress;
  * @since 2023/7/27
  */
 @Slf4j
-public class ClientSide {
+public class Utf32Client {
     public static void main(String[] args) {
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("io"));
 

@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadFactory;
  * @since 2023/6/29
  */
 @Slf4j
-public class SingleThreadExecutorGroup extends AbstractEventLoopGroup<SingleThreadExecutor> {
+public class SingleThreadExecutorGroup extends AbstractEventExecutorGroup<SingleThreadExecutor> {
 
     public SingleThreadExecutorGroup(int threadNum) {
         super(threadNum);

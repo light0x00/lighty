@@ -10,27 +10,25 @@ import lombok.extern.slf4j.Slf4j;
  * @since 2023/7/13
  */
 @Slf4j
-class ServerMessageHandler extends DuplexChannelHandlerAdapter {
+class ServerMessageHandler extends DuplexChannelHandlerAdapter  {
 
     @Override
-    public void exceptionCaught(ChannelContext context, Throwable th) {
-        log.info("exceptionCaught", th);
-        throw new RuntimeException("可爱的bug");
+    public void exceptionCaught(ChannelContext context, Throwable t) {
+        log.info("exceptionCaught", t);
     }
 
     @Override
     public void onConnected(ChannelContext context) {
+        log.info("onConnected");
         context.channel().write("hello world")
                 .addListener(
                         (f) -> context.channel().close()
                 );
-
-        throw new RuntimeException("无聊bug");
-
     }
 
     @Override
     public void onRead(ChannelContext context, Object data, InboundPipeline next) {
         log.info("onRead: {}", data);
     }
+
 }

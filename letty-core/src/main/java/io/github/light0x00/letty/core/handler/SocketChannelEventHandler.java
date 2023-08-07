@@ -1,7 +1,6 @@
 package io.github.light0x00.letty.core.handler;
 
 import io.github.light0x00.letty.core.AbstractNioSocketChannel;
-import io.github.light0x00.letty.core.InitializingSocketChannel;
 import io.github.light0x00.letty.core.LettyConfiguration;
 import io.github.light0x00.letty.core.LettyProperties;
 import io.github.light0x00.letty.core.buffer.BufferPool;
@@ -9,8 +8,9 @@ import io.github.light0x00.letty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.letty.core.buffer.RingBuffer;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.eventloop.EventExecutor;
-import io.github.light0x00.letty.core.eventloop.EventLoopGroup;
+import io.github.light0x00.letty.core.eventloop.EventExecutorGroup;
 import io.github.light0x00.letty.core.eventloop.NioEventLoop;
+import io.github.light0x00.letty.core.facade.InitializingSocketChannel;
 import io.github.light0x00.letty.core.handler.adapter.DuplexChannelHandler;
 import io.github.light0x00.letty.core.util.LettyException;
 import lombok.AllArgsConstructor;
@@ -108,13 +108,13 @@ public class SocketChannelEventHandler implements NioEventHandler {
         lettyConf = configuration.lettyProperties();
         bufferPool = configuration.bufferPool();
 
-        var channelConfiguration = new InitializingSocketChannel(javaChannel);
+        var channelConfiguration = new InitializingSocketChannel(javaChannel, eventLoop);
 
         configuration.channelInitializer()
                 .initChannel(channelConfiguration);
 
         //determine executor
-        EventLoopGroup<?> handlerExecutorGroup = channelConfiguration.executorGroup();
+        EventExecutorGroup<?> handlerExecutorGroup = channelConfiguration.executorGroup();
         if (handlerExecutorGroup == null || eventLoop.group() == handlerExecutorGroup) {
             //如果没有单独指定 executor 去执行用户代码, 那么使用当前 event loop 执行.
             handlerExecutor = eventLoop;
@@ -125,9 +125,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
         dispatcher = new ChannelHandlerDispatcher(
                 handlerExecutor,
                 context,
-                channelConfiguration.observers(),
-                channelConfiguration.inboundHandlers(),
-                channelConfiguration.outboundHandlers(),
+                channelConfiguration.handlerExecutorPair(),
                 (data) -> {
                     log.warn("Discarded inbound message {} that reached at the tail of the pipeline. Please check your pipeline configuration.", data);
                 },
@@ -157,10 +155,11 @@ public class SocketChannelEventHandler implements NioEventHandler {
             javaChannel.finishConnect();
         } catch (IOException e) {
             connectableFuture.setFailure(e);
-            throw e;
+            close();
+            return;
         }
         connectableFuture.setSuccess(channel);
-        dispatcher.onConnected(context);
+        dispatcher.onConnected();
         key.interestOps((key.interestOps() ^ SelectionKey.OP_CONNECT) | SelectionKey.OP_READ);
     }
 
@@ -198,13 +197,13 @@ public class SocketChannelEventHandler implements NioEventHandler {
                 }
             } else {
                 //如果还有剩余，意味 socket 发送缓冲着已经满了，只能等待下一次 Writable 事件
-                log.debug("suspend writing socket buffer");
+                log.debug("Underlying socket sending buffer is full, wait next time writable event.");
                 return;
             }
         }
 
         key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
-        log.debug("All the outbound buffer has been written, remove interest to writeable event.");
+        log.debug("All the outbound buffers flushed, remove interest to writeable event.");
     }
 
     /**
@@ -257,7 +256,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
         //更新状态
         inputClosed = true;
         //事件通知
-        dispatcher.onReadCompleted(context);
+        dispatcher.onReadCompleted();
 
         if (outputClosed) {
             onFinalized();
@@ -336,7 +335,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
 
         log.debug("Release resource associated with channel {}", name);
 
-        dispatcher.onClosed(context);
+        dispatcher.onClosed();
     }
 
     class NioSocketChannelImpl extends AbstractNioSocketChannel {
@@ -345,47 +344,38 @@ public class SocketChannelEventHandler implements NioEventHandler {
             super(javaChannel);
         }
 
+        @Nonnull
         @Override
         public ListenableFutureTask<Void> connectedFuture() {
-            return SocketChannelEventHandler.this.dispatcher.connectedFuture;
+            return SocketChannelEventHandler.this.dispatcher.connectedFuture();
         }
 
+        @Nonnull
         @Override
         public ListenableFutureTask<Void> closeFuture() {
-            return SocketChannelEventHandler.this.dispatcher.closedFuture;
+            return SocketChannelEventHandler.this.dispatcher.closedFuture();
         }
 
+        @Nonnull
         @Override
         public ListenableFutureTask<Void> shutdownInput() {
-            if (eventLoop.inEventLoop()) {
-                SocketChannelEventHandler.this.shutdownInput();
-                return ListenableFutureTask.successFuture();
-            } else {
-                return eventLoop.submit(SocketChannelEventHandler.this::shutdownInput);
-            }
+            return eventLoop.submit(SocketChannelEventHandler.this::shutdownInput);
         }
 
+        @Nonnull
         @Override
         public ListenableFutureTask<Void> shutdownOutput() {
-            if (eventLoop.inEventLoop()) {
-                SocketChannelEventHandler.this.shutdownOutput();
-                return ListenableFutureTask.successFuture();
-            } else {
-                return eventLoop.submit(SocketChannelEventHandler.this::shutdownOutput);
-
-            }
+            return eventLoop.submit(SocketChannelEventHandler.this::shutdownOutput);
         }
 
+        @Nonnull
         @Override
         public ListenableFutureTask<Void> close() {
-            if (eventLoop.inEventLoop()) {
-                SocketChannelEventHandler.this.close();
-            } else {
-                eventLoop.execute(SocketChannelEventHandler.this::close);
-            }
+            eventLoop.execute(SocketChannelEventHandler.this::close);
             return closeFuture();
         }
 
+        @Nonnull
         @Override
         public ListenableFutureTask<Void> write(@Nonnull Object data) {
             return dispatcher.output(data);
@@ -473,16 +463,23 @@ public class SocketChannelEventHandler implements NioEventHandler {
     @AllArgsConstructor
     static class FileChannelWriteStrategy implements WriteStrategy {
         private FileChannel fileChannel;
+        private long position;
+
+        public FileChannelWriteStrategy(FileChannel fileChannel) {
+            this.fileChannel = fileChannel;
+        }
 
         @Override
         public long write(GatheringByteChannel channel) throws IOException {
-            return (int) fileChannel.transferTo(fileChannel.position(), fileChannel.size(), channel);
+            long written = fileChannel.transferTo(position, fileChannel.size() - position, channel);
+            position += written;
+            return written;
         }
 
         @SneakyThrows
         @Override
         public long remaining() {
-            return fileChannel.size() - fileChannel.position();
+            return fileChannel.size() - position;
         }
 
         @Override
@@ -493,7 +490,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
 
     static class ByteBufferWriteStrategy implements WriteStrategy {
 
-        private ByteBuffer buffer;
+        private final ByteBuffer buffer;
 
         public ByteBufferWriteStrategy(byte[] arr) {
             this.buffer = ByteBuffer.wrap(arr);

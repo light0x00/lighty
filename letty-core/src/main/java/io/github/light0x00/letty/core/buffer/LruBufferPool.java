@@ -59,7 +59,10 @@ public class LruBufferPool extends BufferPool {
     public RecyclableBuffer take(int acquireCapacity) {
         ByteBuffer byteBuffer = takeAtLeast(acquireCapacity)
                 .map(ByteBuffer::clear)
-                .orElseGet(() -> bufferAllocator.allocate(acquireCapacity));
+                .orElseGet(() -> {
+                    log.debug("Allocate buffer: {} bytes", acquireCapacity);
+                    return bufferAllocator.allocate(acquireCapacity);
+                });
         return new RecyclableBuffer(this, byteBuffer, 0, acquireCapacity);
     }
 
@@ -77,7 +80,6 @@ public class LruBufferPool extends BufferPool {
                 chosen = candidateQueue.poll();
 
                 assert chosen != null;
-                log.debug("latest access:{}", chosen.capacity());
 
                 bytesInPool -= chosen.capacity();
                 //4.如果移出后 buffer 队列没有剩余,则将队列移出池子

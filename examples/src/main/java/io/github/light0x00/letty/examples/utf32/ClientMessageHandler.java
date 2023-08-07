@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 class ClientMessageHandler extends DuplexChannelHandlerAdapter {
 
     @Override
-    public void exceptionCaught(ChannelContext context, Throwable th) {
+    public void exceptionCaught(ChannelContext context, Throwable t) {
 
     }
 
@@ -21,11 +21,13 @@ class ClientMessageHandler extends DuplexChannelHandlerAdapter {
     public void onConnected(ChannelContext context) {
 //        context.channel().write("hello world");
 //        context.channel().close();
-        log.info("{}",context.channel().localAddress());
+        log.info("{}", context.channel().localAddress());
     }
 
     @Override
     public void onRead(ChannelContext context, Object data, InboundPipeline next) {
         log.info("onRead: {}", data);
+
+        context.channel().write("ACK:" + data);
     }
 }

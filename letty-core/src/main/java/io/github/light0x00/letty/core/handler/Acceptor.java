@@ -41,7 +41,7 @@ public class Acceptor implements NioEventHandler {
         eventLoop.register(incomingChannel, SelectionKey.OP_READ, (selectionKey) ->
                 new SocketChannelEventHandler(eventLoop, incomingChannel, selectionKey, lettyConfiguration) {
                     {
-                        dispatcher.onConnected(context);
+                        dispatcher.onConnected();
                         connectableFuture.setSuccess(channel);
                     }
                 }

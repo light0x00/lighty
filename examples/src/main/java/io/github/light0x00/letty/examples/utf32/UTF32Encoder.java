@@ -16,6 +16,8 @@ public class UTF32Encoder extends OutboundChannelHandlerAdapter {
 
     @Override
     public void onWrite(ChannelContext context, Object msg, OutboundPipeline next) {
+        log.info("encode..");
+
         String str = ((String) msg);
 
         int capacity = str.codePointCount(0, str.length()) * 4;
@@ -24,7 +26,6 @@ public class UTF32Encoder extends OutboundChannelHandlerAdapter {
 
         str.codePoints().forEach(buf::putInt);
 
-        log.info("write");
         //将
         context.channel().write(buf)
                 .addListener(
@@ -42,8 +43,7 @@ public class UTF32Encoder extends OutboundChannelHandlerAdapter {
                         f -> {
                             log.info("write result:{}", f.isSuccess());
                         }
-                )
-        ;
+                ) ;
     }
 
 }

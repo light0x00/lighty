@@ -2,6 +2,7 @@ package io.github.light0x00.letty.core.buffer;
 
 import io.github.light0x00.letty.core.util.LettyException;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
@@ -9,7 +10,7 @@ import java.nio.channels.ScatteringByteChannel;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
-public class RecyclableBuffer extends RingBuffer {
+public class RecyclableBuffer extends RingBuffer implements Closeable {
 
     private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
     private ReentrantReadWriteLock.ReadLock readLock = rwLock.readLock();
@@ -27,7 +28,7 @@ public class RecyclableBuffer extends RingBuffer {
 
     private void ensureNotReleased() {
         if (hasReleased) {
-            throw new LettyException("Buffer({}) has been released!", this.toString());
+            throw new LettyException("The buffer has already released, {}", this.toString());
         }
     }
 
@@ -294,4 +295,8 @@ public class RecyclableBuffer extends RingBuffer {
         }
     }
 
+    @Override
+    public void close() throws IOException {
+        release();
+    }
 }

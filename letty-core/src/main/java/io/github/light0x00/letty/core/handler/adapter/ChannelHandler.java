@@ -6,9 +6,9 @@ import io.github.light0x00.letty.core.handler.ChannelContext;
  * @author light0x00
  * @since 2023/7/1
  */
-public interface ChannelObserver {
+public interface ChannelHandler {
 
-    void exceptionCaught(ChannelContext context, Throwable th);
+    void exceptionCaught(ChannelContext context, Throwable t);
 
     void onConnected(ChannelContext context);
 

@@ -1,6 +1,7 @@
 package io.github.light0x00.letty.core;
 
 import io.github.light0x00.letty.core.buffer.BufferPool;
+import io.github.light0x00.letty.core.facade.ChannelInitializer;
 
 /**
  * @author light0x00

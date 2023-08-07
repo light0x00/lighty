@@ -28,4 +28,12 @@ public interface EventExecutor extends Executor {
     boolean inEventLoop();
 
     ListenableFutureTask<Void> shutdown();
+
+    default void executeDirectlyIfInEventLoop(Runnable runnable) {
+        if (inEventLoop()) {
+            runnable.run();
+        } else {
+            execute(runnable);
+        }
+    }
 }

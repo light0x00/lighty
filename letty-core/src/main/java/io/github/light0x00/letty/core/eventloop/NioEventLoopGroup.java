@@ -9,7 +9,7 @@ import java.util.concurrent.ThreadFactory;
  * @author light0x00
  * @since 2023/6/16
  */
-public class NioEventLoopGroup extends AbstractEventLoopGroup<NioEventLoop> {
+public class NioEventLoopGroup extends AbstractEventExecutorGroup<NioEventLoop> {
 
     public NioEventLoopGroup(int threadNum) {
         super(threadNum);

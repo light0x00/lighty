@@ -54,13 +54,13 @@ public class NioEventLoop implements EventExecutor {
     private volatile Thread workerThread;
 
     @Getter
-    private final EventLoopGroup<NioEventLoop> group;
+    private final EventExecutorGroup<NioEventLoop> group;
 
     @Getter
     private final ListenableFutureTask<Void> shutdownFuture = new ListenableFutureTask<>(null);
 
     @SneakyThrows
-    public NioEventLoop(Executor executor, EventLoopGroup<NioEventLoop> group) {
+    public NioEventLoop(Executor executor, EventExecutorGroup<NioEventLoop> group) {
         this.executor = executor;
         this.group = group;
         selector = Selector.open();
@@ -215,7 +215,7 @@ public class NioEventLoop implements EventExecutor {
             invokeClose(handler);
         }
         selector.close();
-        log.debug("All the resource associated with event loop released");
+        log.debug("All the resources associated with event loop released");
 
         shutdownFuture.setSuccess();
     }

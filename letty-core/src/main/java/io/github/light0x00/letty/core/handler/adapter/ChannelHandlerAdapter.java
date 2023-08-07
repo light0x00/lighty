@@ -7,7 +7,7 @@ import io.github.light0x00.letty.core.util.Skip;
  * @author light0x00
  * @since 2023/7/4
  */
-public abstract class ChannelHandlerAdapter implements ChannelObserver {
+public abstract class ChannelHandlerAdapter implements ChannelHandler {
 
     @Override
     @Skip
@@ -29,7 +29,7 @@ public abstract class ChannelHandlerAdapter implements ChannelObserver {
 
     @Override
     @Skip
-    public void exceptionCaught(ChannelContext context, Throwable th) {
+    public void exceptionCaught(ChannelContext context, Throwable t) {
 
     }
 }
