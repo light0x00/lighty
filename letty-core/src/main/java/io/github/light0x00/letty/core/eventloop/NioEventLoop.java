@@ -1,5 +1,6 @@
 package io.github.light0x00.letty.core.eventloop;
 
+import io.github.light0x00.letty.core.concurrent.EventHandlerProvider;
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.letty.core.concurrent.RejectedExecutionHandler;
 import io.github.light0x00.letty.core.handler.NioEventHandler;
@@ -12,14 +13,13 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 import static io.github.light0x00.letty.core.util.Tool.slf4jFormat;
 
@@ -66,7 +66,7 @@ public class NioEventLoop implements EventExecutor {
         selector = Selector.open();
     }
 
-    public void addTask(Runnable runnable, boolean wakeup) {
+    private void addTask(Runnable runnable, boolean wakeup) {
         tasks.offer(runnable);
         if (wakeup) {
             wakeup();
@@ -91,20 +91,18 @@ public class NioEventLoop implements EventExecutor {
          * 3.recheck condition, then decide confirm or rollback
          * */
         if (state.get() == RUNNING) {
-            addTask(command, true);
+            tasks.offer(command);
             if (state.get() != RUNNING) {
                 if (tasks.remove(command)) {
                     rejectedExecutionHandler.rejected(command, this);
                 }
+            } else {
+                wakeup();
             }
         } else {
             rejectedExecutionHandler.rejected(command, this);
         }
 
-    }
-
-    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel, int interestOps, NioEventHandler handler) {
-        return register(channel, interestOps, (k) -> handler);
     }
 
     /**
@@ -113,35 +111,30 @@ public class NioEventLoop implements EventExecutor {
      * @implNote The listeners of the future returned, will be executed in event loop by default.
      * Be aware the concurrent race when change the executor.
      */
-    public ListenableFutureTask<SelectionKey> register(SelectableChannel channel,
-                                                       int interestOps,
-                                                       Function<SelectionKey, NioEventHandler> eventHandlerProvider) {
-        var registerFuture = new ListenableFutureTask<>(new Callable<SelectionKey>() {
-            @Override
-            @SneakyThrows
-            public SelectionKey call() {
-                if (!channel.isOpen()) {
-                    //Indicate the channel closing operation happened before current register operation.
-                    //Usually it happened in the previous event loop.
-                    //For this situation, a ClosedChannelException will be thrown.
-                    log.warn("Channel has been closed");
-                }
-                SelectionKey key = channel.register(selector, interestOps);
-                try {
-                    key.attach(eventHandlerProvider.apply(key));
-                } catch (Throwable th) {
-                    key.cancel();   //避免发生注册成功, 但是 attachment 为空的情况
-                    throw th;
-                }
-                return key;
-            }
-        }, this);
+    public <T extends NioEventHandler> ListenableFutureTask<T> register(SelectableChannel channel,
+                                                                        int interestOps,
+                                                                        EventHandlerProvider<T> eventHandlerProvider) {
         if (inEventLoop()) {
-            registerFuture.run();
+            register0(channel, interestOps, eventHandlerProvider);
+            return ListenableFutureTask.successFuture();
         } else {
-            execute(registerFuture);
+            return submit(() -> register0(channel, interestOps, eventHandlerProvider));
         }
-        return registerFuture;
+    }
+    @SneakyThrows
+    @Nonnull
+    private <T extends NioEventHandler> T register0(SelectableChannel channel, int interestOps, EventHandlerProvider<T> eventHandlerProvider) {
+        SelectionKey key = channel.register(selector, interestOps);
+        try {
+            T eventHandler = Objects.requireNonNull(eventHandlerProvider.get(key));
+            key.attach(eventHandler);
+            return eventHandler;
+        } catch (Throwable th) {
+            //必须确保 Selector 中每一个注册的 SelectionKey 的 attachment 都为 EventHandler
+            //如果获取 eventHandler 异常, 则必须取消掉 SelectionKey, 避免后续取用时 NPE
+            key.cancel();
+            throw th;
+        }
     }
 
     public void wakeup() {
@@ -176,7 +169,7 @@ public class NioEventLoop implements EventExecutor {
                     r.run();
                     processResultIfPossible(r);
                 } catch (Throwable th) {
-                    log.warn("Error occurred while process task", th);
+                    log.debug("Error occurred while process task", th);
                 }
             }
             selector.select();

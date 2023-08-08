@@ -1,14 +1,11 @@
 package io.github.light0x00.letty.core
 
-import io.github.light0x00.letty.core.buffer.BufferPool
 import io.github.light0x00.letty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.letty.core.eventloop.NioEventLoopGroup
-import io.github.light0x00.letty.core.facade.ChannelInitializer
 import io.github.light0x00.letty.core.handler.Acceptor
 import io.github.light0x00.letty.core.handler.NioServerSocketChannel
 import io.github.light0x00.letty.core.util.LettyException
 import io.github.light0x00.letty.core.util.Loggable
-import io.github.light0x00.letty.core.util.log
 import java.net.SocketAddress
 import java.net.StandardProtocolFamily
 import java.nio.channels.SelectionKey
@@ -50,19 +47,26 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
         private val configuration: LettyConfiguration
     ) : Loggable {
         fun bind(address: SocketAddress): ListenableFutureTask<NioServerSocketChannel> {
-            val ssc = ServerSocketChannel.open(StandardProtocolFamily.INET)
-            ssc.configureBlocking(false)
+            val serverChannel = ServerSocketChannel.open(StandardProtocolFamily.INET)
+            serverChannel.configureBlocking(false)
             val bindFuture = ListenableFutureTask<NioServerSocketChannel>(null)
             val eventLoop = parent.next()
 
-            eventLoop.register(ssc, SelectionKey.OP_ACCEPT) { key ->
-                Acceptor(ssc, key, child, configuration)
-            }.addListener { futureTask ->
-                ssc.bind(address)
-                log.debug("Listen on {}", address)
-                val key = futureTask.get()
-                bindFuture.setSuccess(NioServerSocketChannel(ssc, key, eventLoop))
-            }
+            eventLoop
+                .register(serverChannel, SelectionKey.OP_ACCEPT) { key ->
+                    Acceptor(serverChannel, key, eventLoop, child, configuration, bindFuture)
+                }
+                .addListener {
+                    if (it.isSuccess) {
+                        val acceptor = it.get()
+                        acceptor.bind(address)
+                    } else {
+                        //register 阶段失败, 关闭 serverChannel, 避免其一直处于 unbound 状态, 占用系统资源.
+                        serverChannel.close()
+                        bindFuture.setFailure(it.cause())
+                    }
+                }
+
             return bindFuture
         }
     }

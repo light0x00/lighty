@@ -1,6 +1,8 @@
 package io.github.light0x00.letty.core.concurrent;
 
 
+import javax.annotation.Nonnull;
+
 public interface FutureListener<T> {
-    void operationComplete(ListenableFutureTask<T> future);
+    void operationComplete(@Nonnull ListenableFutureTask<T> future);
 }

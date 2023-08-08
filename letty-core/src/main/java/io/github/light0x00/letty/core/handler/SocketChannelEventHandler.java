@@ -133,7 +133,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
                     if (eventLoop.inEventLoop()) {
                         write(data, future);
                     } else {
-                        eventLoop.submit(() -> write(data, future));
+                        eventLoop.execute(() -> write(data, future));
                     }
                 }
         );
@@ -155,7 +155,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
             javaChannel.finishConnect();
         } catch (IOException e) {
             connectableFuture.setFailure(e);
-            close();
+            close0();
             return;
         }
         connectableFuture.setSuccess(channel);
@@ -310,9 +310,12 @@ public class SocketChannelEventHandler implements NioEventHandler {
      * <p>
      * Be aware that must be executed in curren event loop, cuz there is no any synchronization!
      */
-    public void close() {
+    public ListenableFutureTask<Void> close() {
+        eventLoop.execute(this::close0);
+        return dispatcher.closedFuture();
+    }
 
-        //幂等
+    private void close0() {
         if (outputClosed && inputClosed) {
             return;
         }
@@ -371,7 +374,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
         @Nonnull
         @Override
         public ListenableFutureTask<Void> close() {
-            eventLoop.execute(SocketChannelEventHandler.this::close);
+            eventLoop.execute(SocketChannelEventHandler.this::close0);
             return closeFuture();
         }
 

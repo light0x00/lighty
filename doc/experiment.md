@@ -47,7 +47,7 @@ Selector
 1. 协商式,双方先后 `shutdownOutput`,完成 “four-way handshake”; 单方 `shutdownOutput` 只表示不发出数据,但仍然可以接收数据. 
 2. 强迫式,主动 `close` 的一方发出 FIN 包后, 此时既不能发出数据,也不再接收数据(收到会返回 RST 警告), 只会形式化走个过场,等待对方的 FIN,若超时便强行断开连接.  
 
-如果使用第二种来关闭, 那么对于主动的一方, `channel.close` 内部会自动释放资源,包括将 `SelectionKey` 从 `Selector` 中移除. 而对于被强迫的一方,后续对 channel 的操作会发生异常 `java.net.SocketException: Connection reset`, 通过捕获异常, 进行 `key.cancel`, `channel.close` 即可.
+如果使用第二种来关闭, 那么对于主动的一方, `channel.close` 内部会自动释放资源,包括将 `SelectionKey` 变为 invalid, 使之在下一次 select 时, 被检测到继而从 `Selector` 中移除. 而对于被强迫的一方,后续对 channel 的操作会发生异常 `java.net.SocketException: Connection reset`, 通过捕获异常, 进行 `key.cancel`, `channel.close` 即可.
 
 而如果使用第一种来关闭,那么就需要慎重处理. 
 
@@ -65,6 +65,13 @@ if (((SocketChannel)key.channel()).socket().isOutputShutdown()) { //如果有另
     key.channel().close();
 } 
 ```
+
+## ServerSocketChannel 的关闭处理
+
+在服务端, `SocketChannel` 都是由 `ServerSocketChannel#accept` 返回, 一个问题是, 当关闭 ServerSocketChannel 时, 相关联的 `SocketChannel` 是否还有效?
+
+问题的答案是, 仍然有效, 这些 channel 可以正常读写数据. `ServerSocketChannel` 被关闭后, 会关掉监听端口的能力, 因此无法接收新的连接.
+
 
 ## EventLoop 如何 shutdown
 
@@ -119,7 +126,6 @@ EventLoop 线程被唤醒(如果阻塞与 select 的话)后, 先执行`NioEventL
 - channel 的 closed 事件被执行
 - selectionKey 被 cancel 
 - pipeline 的 `fireChannelInactive` 被执行.
-
 
 ## 异常捕获
 

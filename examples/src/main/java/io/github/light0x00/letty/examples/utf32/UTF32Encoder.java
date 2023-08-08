@@ -26,7 +26,6 @@ public class UTF32Encoder extends OutboundChannelHandlerAdapter {
 
         str.codePoints().forEach(buf::putInt);
 
-        //将
         context.channel().write(buf)
                 .addListener(
                         f -> {
