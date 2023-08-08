@@ -296,7 +296,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close(){
         release();
     }
 }

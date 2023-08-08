@@ -10,10 +10,10 @@ open class DefaultLettyProperties : LettyProperties {
     }
 
     override fun readBufSize(): Int {
-        return 16
+        return 1024
     }
 
     override fun bufferPoolMaxSize(): Int {
-        return 64
+        return 128 * 1024 * 1024
     }
 }

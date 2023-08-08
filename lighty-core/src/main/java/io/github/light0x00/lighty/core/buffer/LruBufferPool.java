@@ -123,6 +123,7 @@ public class LruBufferPool extends BufferPool {
             pool.computeIfAbsent(buf.capacity(), key -> new LinkedList<>())
                     .add(buf);
             bytesInPool += capacity;
+            log.debug("Recycle buffer: {} bytes", capacity);
         }
     }
 
@@ -143,7 +144,7 @@ public class LruBufferPool extends BufferPool {
             Queue<ByteBuffer> candidatesToEvict = pool.get(capacityToEvict);
             while (!candidatesToEvict.isEmpty()) {
                 bytesInPool -= candidatesToEvict.poll().capacity();
-                log.debug("evict {}", capacityToEvict);
+                log.debug("Evict {} bytes", capacityToEvict);
                 if (maxBytes - bytesInPool >= capacity) {
                     break;
                 }
