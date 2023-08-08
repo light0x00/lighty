@@ -9,19 +9,8 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>examples</artifactId>
-
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
+    <artifactId>lighty-core</artifactId>
     <dependencies>
-        <dependency>
-            <groupId>io.github.light0x00</groupId>
-            <artifactId>lighty-core</artifactId>
-        </dependency>
-    </dependencies>
 
+    </dependencies>
 </project>

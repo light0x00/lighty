@@ -5,12 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.light0x00</groupId>
-    <artifactId>letty</artifactId>
+    <artifactId>lighty</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
-        <module>letty-core-old</module>
-        <module>letty-core</module>
+        <module>lighty-core</module>
         <module>examples</module>
     </modules>
 
@@ -26,7 +25,7 @@
         <dependencies>
             <dependency>
                 <groupId>io.github.light0x00</groupId>
-                <artifactId>letty-core</artifactId>
+                <artifactId>lighty-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
