@@ -2,7 +2,7 @@ package io.github.light0x00.lighty.core;
 
 
 import io.github.light0x00.lighty.core.buffer.DefaultBufferPool;
-import io.github.light0x00.lighty.core.util.LettyException;
+import io.github.light0x00.lighty.core.util.LightyException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +33,7 @@ public class BufferPoolTest {
 
 
         Assertions.assertEquals(2, allocCount.get());
-        Assertions.assertThrows(LettyException.class, () -> buf.get());
+        Assertions.assertThrows(LightyException.class, () -> buf.get());
     }
 
     /**

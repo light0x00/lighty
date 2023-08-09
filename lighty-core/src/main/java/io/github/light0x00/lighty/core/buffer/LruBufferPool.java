@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.core.buffer;
 
-import io.github.light0x00.lighty.core.util.LettyException;
+import io.github.light0x00.lighty.core.util.LightyException;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -137,7 +137,7 @@ public class LruBufferPool extends BufferPool {
         while (maxBytes - bytesInPool < capacity) {
             if (lruQueue.isEmpty()) {
                 //这种情况, 意味着池子为空, 且要申请的 buffer 容量大于池子的最大容量
-                throw new LettyException("Buffer pool space not enough! The max bytes of pool is {}, but the required is {}", maxBytes, capacity);
+                throw new LightyException("Buffer pool space not enough! The max bytes of pool is {}, but the required is {}", maxBytes, capacity);
             }
             Integer capacityToEvict = lruQueue.peek();
 

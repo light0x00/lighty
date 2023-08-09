@@ -18,5 +18,4 @@ abstract class GenericFutureListener<T> : FutureListener<T> {
 
     abstract fun onFailure(cause: Throwable)
 
-
 }

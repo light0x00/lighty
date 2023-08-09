@@ -4,7 +4,7 @@ import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup
 import io.github.light0x00.lighty.core.handler.Acceptor
 import io.github.light0x00.lighty.core.handler.NioServerSocketChannel
-import io.github.light0x00.lighty.core.util.LettyException
+import io.github.light0x00.lighty.core.util.LightyException
 import io.github.light0x00.lighty.core.util.Loggable
 import java.net.SocketAddress
 import java.net.StandardProtocolFamily
@@ -34,7 +34,7 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
 
     fun bind(address: SocketAddress): ListenableFutureTask<NioServerSocketChannel> {
         if (acceptorGroup == null || workerGroup == null) {
-            throw LettyException("group not set")
+            throw LightyException("group not set")
         }
         val configuration = buildConfiguration()
         return Server(acceptorGroup!!, workerGroup!!, configuration)
@@ -44,7 +44,7 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
     class Server(
         private val parent: NioEventLoopGroup,
         private val child: NioEventLoopGroup,
-        private val configuration: LettyConfiguration
+        private val configuration: LightyConfiguration
     ) : Loggable {
         fun bind(address: SocketAddress): ListenableFutureTask<NioServerSocketChannel> {
             val serverChannel = ServerSocketChannel.open(StandardProtocolFamily.INET)

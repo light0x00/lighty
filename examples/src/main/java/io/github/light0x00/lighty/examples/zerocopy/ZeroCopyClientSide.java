@@ -1,7 +1,7 @@
 package io.github.light0x00.lighty.examples.zerocopy;
 
 import io.github.light0x00.lighty.core.ClientBootstrap;
-import io.github.light0x00.lighty.core.DefaultLettyProperties;
+import io.github.light0x00.lighty.core.DefaultLightyProperties;
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup;
 import io.github.light0x00.lighty.core.facade.ChannelInitializer;
@@ -26,7 +26,7 @@ public class ZeroCopyClientSide {
 
         ListenableFutureTask<NioSocketChannel> connect = new ClientBootstrap()
                 .group(eventLoopGroup)
-                .properties(new DefaultLettyProperties() {
+                .properties(new DefaultLightyProperties() {
 
                     @Override
                     public int bufferPoolMaxSize() {

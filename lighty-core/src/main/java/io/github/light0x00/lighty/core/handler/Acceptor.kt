@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.core.handler
 
-import io.github.light0x00.lighty.core.LettyConfiguration
+import io.github.light0x00.lighty.core.LightyConfiguration
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup
@@ -19,7 +19,7 @@ class Acceptor(
     private val key: SelectionKey,
     private val eventLoop: NioEventLoop,
     private val workerGroup: NioEventLoopGroup,
-    private val lettyConfiguration: LettyConfiguration,
+    private val lightyConfiguration: LightyConfiguration,
     private val bindFuture: ListenableFutureTask<NioServerSocketChannel>,
 ) : NioEventHandler, Loggable {
 
@@ -43,7 +43,7 @@ class Acceptor(
 
         workerEventLoop
             .register(incomingChannel, SelectionKey.OP_READ) { selectionKey: SelectionKey? ->
-                object : SocketChannelEventHandler(workerEventLoop, incomingChannel, selectionKey, lettyConfiguration) {
+                object : SocketChannelEventHandler(workerEventLoop, incomingChannel, selectionKey, lightyConfiguration) {
                     // 对于 server 侧的 SocketChannel 而言, 其 connected 事件, 在 ServerSocketChannel acceptable 时就触发
                     init {
                         dispatcher.onConnected()

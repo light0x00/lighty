@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.core;
 
-public interface LettyProperties {
+public interface LightyProperties {
 
     /**
      * Returns {@code true} if and only if the channel should not close itself when its remote

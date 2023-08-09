@@ -1,8 +1,8 @@
 package io.github.light0x00.lighty.core.handler;
 
 import io.github.light0x00.lighty.core.AbstractNioSocketChannel;
-import io.github.light0x00.lighty.core.LettyConfiguration;
-import io.github.light0x00.lighty.core.LettyProperties;
+import io.github.light0x00.lighty.core.LightyConfiguration;
+import io.github.light0x00.lighty.core.LightyProperties;
 import io.github.light0x00.lighty.core.buffer.BufferPool;
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
@@ -12,7 +12,7 @@ import io.github.light0x00.lighty.core.eventloop.EventExecutorGroup;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop;
 import io.github.light0x00.lighty.core.facade.InitializingSocketChannel;
 import io.github.light0x00.lighty.core.handler.adapter.DuplexChannelHandler;
-import io.github.light0x00.lighty.core.util.LettyException;
+import io.github.light0x00.lighty.core.util.LightyException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -48,7 +48,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
 
     protected final BufferPool bufferPool;
 
-    protected final LettyProperties lettyConf;
+    protected final LightyProperties lettyConf;
 
     protected final SocketChannel javaChannel;
 
@@ -89,14 +89,14 @@ public class SocketChannelEventHandler implements NioEventHandler {
     public SocketChannelEventHandler(NioEventLoop eventLoop,
                                      SocketChannel channel,
                                      SelectionKey key,
-                                     LettyConfiguration lettyConfiguration) {
-        this(eventLoop, channel, key, lettyConfiguration, new ListenableFutureTask<>(null));
+                                     LightyConfiguration lightyConfiguration) {
+        this(eventLoop, channel, key, lightyConfiguration, new ListenableFutureTask<>(null));
     }
 
     public SocketChannelEventHandler(NioEventLoop eventLoop,
                                      SocketChannel javaChannel,
                                      SelectionKey key,
-                                     LettyConfiguration configuration,
+                                     LightyConfiguration configuration,
                                      ListenableFutureTask<NioSocketChannel> connectableFuture
     ) {
         this.eventLoop = eventLoop;
@@ -216,7 +216,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
     @SneakyThrows
     private ListenableFutureTask<Void> write(Object data, ListenableFutureTask<Void> writeFuture) {
         if (outputClosed) {
-            writeFuture.setFailure(new LettyException("Channel output has been shut down"));
+            writeFuture.setFailure(new LightyException("Channel output has been shut down"));
             return writeFuture;
         }
 
@@ -231,7 +231,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
         } else if (data instanceof FileChannel fc) {
             rBuf = new FileChannelWriteStrategy(fc);
         } else {
-            writeFuture.setFailure(new LettyException("Unsupported data type to write:" + data.getClass()));
+            writeFuture.setFailure(new LightyException("Unsupported data type to write:" + data.getClass()));
             return writeFuture;
         }
 
@@ -429,7 +429,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
         public void invalid() {
             log.debug("Clear outbound buffer ,remaining:{}", outputBuffer.size());
             for (WriterFuturePair bufFuture; (bufFuture = outputBuffer.poll()) != null; ) {
-                bufFuture.future.setFailure(new LettyException("Output Buffer cleared"));
+                bufFuture.future.setFailure(new LightyException("Output Buffer cleared"));
             }
         }
     }

@@ -7,7 +7,7 @@ import io.github.light0x00.lighty.core.eventloop.EventExecutorGroup
 import io.github.light0x00.lighty.core.handler.ChannelHandlerConfiguration
 import io.github.light0x00.lighty.core.handler.ChannelHandlerExecutorPair
 import io.github.light0x00.lighty.core.handler.adapter.ChannelHandler
-import io.github.light0x00.lighty.core.util.LettyException
+import io.github.light0x00.lighty.core.util.LightyException
 import java.nio.channels.SocketChannel
 import java.util.*
 
@@ -50,27 +50,27 @@ class InitializingSocketChannel(javaChannel: SocketChannel, var eventExecutor: E
     }
 
     override fun write(data: Any): ListenableFutureTask<Void> {
-        throw LettyException("operation not supported!");
+        throw LightyException("operation not supported!");
     }
 
     override fun close(): ListenableFutureTask<Void> {
-        throw LettyException("operation not supported!");
+        throw LightyException("operation not supported!");
     }
 
     override fun connectedFuture(): ListenableFutureTask<Void> {
-        throw LettyException("operation not supported!");
+        throw LightyException("operation not supported!");
     }
 
     override fun closeFuture(): ListenableFutureTask<Void> {
-        throw LettyException("operation not supported!");
+        throw LightyException("operation not supported!");
     }
 
     override fun shutdownOutput(): ListenableFutureTask<Void> {
-        throw LettyException("operation not supported!");
+        throw LightyException("operation not supported!");
     }
 
     override fun shutdownInput(): ListenableFutureTask<Void> {
-        throw LettyException("operation not supported!");
+        throw LightyException("operation not supported!");
     }
 
     inner class ChannelPipeline {

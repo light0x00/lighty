@@ -4,7 +4,7 @@ import io.github.light0x00.lighty.core.buffer.BufferPool
 import io.github.light0x00.lighty.core.buffer.DefaultByteBufferAllocator
 import io.github.light0x00.lighty.core.buffer.LruBufferPool
 import io.github.light0x00.lighty.core.facade.ChannelInitializer
-import io.github.light0x00.lighty.core.util.LettyException
+import io.github.light0x00.lighty.core.util.LightyException
 
 /**
  * @author light0x00
@@ -14,7 +14,7 @@ import io.github.light0x00.lighty.core.util.LettyException
 abstract class AbstractBootstrap<T : AbstractBootstrap<T>> {
 
     private var channelInitializer: ChannelInitializer? = null
-    private var properties: LettyProperties? = null
+    private var properties: LightyProperties? = null
     private var bufferPool: BufferPool? = null
 
     fun channelInitializer(channelInitializer: ChannelInitializer): T {
@@ -22,7 +22,7 @@ abstract class AbstractBootstrap<T : AbstractBootstrap<T>> {
         return this as T
     }
 
-    fun properties(properties: LettyProperties): T {
+    fun properties(properties: LightyProperties): T {
         this.properties = properties
         return this as T
     }
@@ -34,12 +34,12 @@ abstract class AbstractBootstrap<T : AbstractBootstrap<T>> {
 
 
     companion object {
-        val defaultProperties = DefaultLettyProperties()
+        val defaultProperties = DefaultLightyProperties()
     }
 
-    private fun validate(lettyProperties: LettyProperties) {
-        if (lettyProperties.bufferPoolMaxSize() < lettyProperties.readBufSize()) {
-            throw LettyException("Illegal properties, readBufSize should less that bufferPoolMaxSize")
+    private fun validate(lightyProperties: LightyProperties) {
+        if (lightyProperties.bufferPoolMaxSize() < lightyProperties.readBufSize()) {
+            throw LightyException("Illegal properties, readBufSize should less that bufferPoolMaxSize")
         }
     }
 
@@ -47,7 +47,7 @@ abstract class AbstractBootstrap<T : AbstractBootstrap<T>> {
         return LruBufferPool(DefaultByteBufferAllocator(), maxSize)
     }
 
-    protected fun buildConfiguration(): LettyConfiguration {
+    protected fun buildConfiguration(): LightyConfiguration {
         if (properties == null) {
             properties = defaultProperties
         } else {
@@ -57,19 +57,19 @@ abstract class AbstractBootstrap<T : AbstractBootstrap<T>> {
             bufferPool = LruBufferPool(DefaultByteBufferAllocator(), properties!!.bufferPoolMaxSize())
         }
         if (channelInitializer == null) {
-            throw LettyException("channelInitializer not set")
+            throw LightyException("channelInitializer not set")
         }
         return newConfiguration(properties!!, bufferPool!!, channelInitializer!!)
     }
 
     private fun newConfiguration(
-        lettyProperties: LettyProperties,
+        lightyProperties: LightyProperties,
         bufferPool: BufferPool,
         channelInitializer: ChannelInitializer
-    ): LettyConfiguration {
-        return object : LettyConfiguration {
-            override fun lettyProperties(): LettyProperties {
-                return lettyProperties
+    ): LightyConfiguration {
+        return object : LightyConfiguration {
+            override fun lettyProperties(): LightyProperties {
+                return lightyProperties
             }
 
             override fun bufferPool(): BufferPool {

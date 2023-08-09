@@ -3,7 +3,7 @@ package io.github.light0x00.lighty.core.handler;
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
 import io.github.light0x00.lighty.core.handler.adapter.InboundChannelHandlerAdapter;
-import io.github.light0x00.lighty.core.util.LettyException;
+import io.github.light0x00.lighty.core.util.LightyException;
 
 /**
  * @author light0x00
@@ -39,7 +39,7 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
                 decode(context, decodeBuf, next);
 
                 if (decodeBuf.remainingCanPut() == 0) {
-                    throw new LettyException("The decode buffer is full, but the decoder has not yet read it. ");
+                    throw new LightyException("The decode buffer is already full, but the decoder has not yet read it. ");
                 }
             }
 

@@ -4,7 +4,7 @@ import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup
 import io.github.light0x00.lighty.core.handler.NioSocketChannel
 import io.github.light0x00.lighty.core.handler.SocketChannelEventHandler
-import io.github.light0x00.lighty.core.util.LettyException
+import io.github.light0x00.lighty.core.util.LightyException
 import java.net.SocketAddress
 import java.nio.channels.SelectionKey
 import java.nio.channels.SocketChannel
@@ -24,12 +24,12 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
 
     fun connect(address: SocketAddress): ListenableFutureTask<NioSocketChannel> {
         if (group == null) {
-            throw LettyException("group not set")
+            throw LightyException("group not set")
         }
         return Client(group!!, buildConfiguration()).connect(address)
     }
 
-    private class Client(private val group: NioEventLoopGroup, private var configuration: LettyConfiguration) {
+    private class Client(private val group: NioEventLoopGroup, private var configuration: LightyConfiguration) {
 
         fun connect(address: SocketAddress?): ListenableFutureTask<NioSocketChannel> {
             val channel = SocketChannel.open()

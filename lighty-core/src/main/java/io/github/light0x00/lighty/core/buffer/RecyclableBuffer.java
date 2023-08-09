@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.core.buffer;
 
-import io.github.light0x00.lighty.core.util.LettyException;
+import io.github.light0x00.lighty.core.util.LightyException;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -28,7 +28,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
 
     private void ensureNotReleased() {
         if (hasReleased) {
-            throw new LettyException("The buffer has already released, {}", this.toString());
+            throw new LightyException("The buffer has already released, {}", this.toString());
         }
     }
 

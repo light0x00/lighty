@@ -4,7 +4,7 @@ package io.github.light0x00.lighty.core
  * @author light0x00
  * @since 2023/7/31
  */
-open class DefaultLettyProperties : LettyProperties {
+open class DefaultLightyProperties : LightyProperties {
     override fun isAllowHalfClosure(): Boolean {
         return false
     }
