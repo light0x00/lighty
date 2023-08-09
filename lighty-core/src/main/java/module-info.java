@@ -4,9 +4,9 @@
  */
 module io.github.light0x00.lighty.core {
     requires kotlin.stdlib;
-    requires jsr305;
-    requires lombok;
+    requires static jsr305;
     requires org.slf4j;
+    requires static lombok;
 
     exports io.github.light0x00.lighty.core.eventloop;
     exports io.github.light0x00.lighty.core.buffer;
