@@ -410,12 +410,18 @@ public class SocketChannelEventHandler implements NioEventHandler {
     public static class OutputBuffer {
         private final Queue<WriterFuturePair> outputBuffer = new ConcurrentLinkedDeque<>();
 
-        public void offer(WriterFuturePair bf) {
-            outputBuffer.offer(bf);
+        private int size;
+
+        public void offer(WriterFuturePair wf) {
+            outputBuffer.offer(wf);
+            size += wf.writer.remaining();
         }
 
         public WriterFuturePair poll() {
-            return outputBuffer.poll();
+            var bf = outputBuffer.poll();
+            if (bf != null)
+                size -= bf.writer.remaining();
+            return bf;
         }
 
         public WriterFuturePair peek() {
@@ -427,7 +433,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
         }
 
         public void invalid() {
-            log.debug("Clear outbound buffer ,remaining:{}", outputBuffer.size());
+            log.debug("Clear outbound buffer ,remaining: {} bytes", size);
             for (WriterFuturePair bufFuture; (bufFuture = outputBuffer.poll()) != null; ) {
                 bufFuture.future.setFailure(new LightyException("Output Buffer cleared"));
             }
