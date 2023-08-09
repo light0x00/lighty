@@ -16,8 +16,8 @@ abstract class AbstractNioSocketChannel(private val javaChannel: SocketChannel) 
 
     override fun remoteAddress(): SocketAddress = javaChannel.remoteAddress
 
-    override fun <T> setOption(name: SocketOption<T>, v: T) {
-        javaChannel.setOption(name, v)
+    override fun <T> setOption(name: SocketOption<T>, value: T) {
+        javaChannel.setOption(name, value)
     }
 
     override fun <T> getOption(name: SocketOption<T>): T = javaChannel.getOption(name)

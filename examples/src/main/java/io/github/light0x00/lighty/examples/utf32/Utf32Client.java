@@ -4,7 +4,7 @@ import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup;
 import io.github.light0x00.lighty.core.facade.ChannelInitializer;
 import io.github.light0x00.lighty.core.facade.ClientBootstrap;
-import io.github.light0x00.lighty.core.facade.InitializingSocketChannel;
+import io.github.light0x00.lighty.core.facade.InitializingNioSocketChannel;
 import io.github.light0x00.lighty.core.facade.NioSocketChannel;
 import io.github.light0x00.lighty.examples.IdentifierThreadFactory;
 import lombok.extern.slf4j.Slf4j;
@@ -21,9 +21,9 @@ public class Utf32Client {
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("io"));
 
         ListenableFutureTask<NioSocketChannel> connectFuture = new ClientBootstrap()
-                .channelInitializer(new ChannelInitializer() {
+                .childInitializer(new ChannelInitializer<InitializingNioSocketChannel>() {
                     @Override
-                    public void initChannel(InitializingSocketChannel channel) {
+                    public void initChannel(InitializingNioSocketChannel channel) {
                         channel.executorGroup(eventLoopGroup);
 
                         channel.pipeline().add(new UTF32Decoder());

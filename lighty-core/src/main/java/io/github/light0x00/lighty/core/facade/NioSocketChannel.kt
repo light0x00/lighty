@@ -8,11 +8,11 @@ import java.net.SocketOption
  * @author light0x00
  * @since 2023/7/12
  */
-interface NioSocketChannel {
+interface NioSocketChannel : NioChannel {
+
+    fun remoteAddress(): SocketAddress
 
     fun write(data: Any): ListenableFutureTask<Void>
-
-    fun close(): ListenableFutureTask<Void>
 
     fun connectedFuture(): ListenableFutureTask<Void>
 
@@ -22,10 +22,4 @@ interface NioSocketChannel {
 
     fun shutdownInput(): ListenableFutureTask<Void>
 
-    fun localAddress(): SocketAddress
-
-    fun remoteAddress(): SocketAddress
-
-    fun <T> setOption(name: SocketOption<T>, v: T)
-    fun <T> getOption(name: SocketOption<T>): T
 }

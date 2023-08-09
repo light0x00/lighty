@@ -12,6 +12,6 @@ public interface LightyConfiguration {
 
     BufferPool bufferPool();
 
-    ChannelInitializer channelInitializer();
+    ChannelInitializer<InitializingNioSocketChannel> channelInitializer();
 
 }

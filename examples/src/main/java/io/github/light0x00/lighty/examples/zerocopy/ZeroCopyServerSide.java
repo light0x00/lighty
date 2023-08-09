@@ -2,7 +2,7 @@ package io.github.light0x00.lighty.examples.zerocopy;
 
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup;
 import io.github.light0x00.lighty.core.facade.ChannelInitializer;
-import io.github.light0x00.lighty.core.facade.InitializingSocketChannel;
+import io.github.light0x00.lighty.core.facade.InitializingNioSocketChannel;
 import io.github.light0x00.lighty.core.facade.ServerBootstrap;
 import io.github.light0x00.lighty.examples.IdentifierThreadFactory;
 import lombok.extern.slf4j.Slf4j;
@@ -27,9 +27,9 @@ public class ZeroCopyServerSide {
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("server"));
         new ServerBootstrap()
                 .group(eventLoopGroup)
-                .channelInitializer(new ChannelInitializer() {
+                .childInitializer(new ChannelInitializer<>() {
                     @Override
-                    public void initChannel(InitializingSocketChannel channel) {
+                    public void initChannel(InitializingNioSocketChannel channel) {
                         channel.pipeline().add(
                                 new FileSender(filePath)
                         );

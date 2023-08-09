@@ -94,7 +94,7 @@ public class LruBufferPool extends BufferPool {
                     //4.每当某种容量的 buffer 被取走, 且池子中该容量的 buffer 还有剩余时
                     //都将该容量从 lru queue 中移动到末尾(表示 “该容量的 buffer 最近访问过”)
                     synchronized (lruLock) {
-                        log.debug("update lru order:{}", chosen.capacity());
+                        log.debug("Update lru order:{}", chosen.capacity());
                         lruQueue.moveToTail(lruMap.get(chosen.capacity()));
                     }
                 }

@@ -11,12 +11,12 @@ import io.github.light0x00.lighty.core.buffer.LruBufferPool
 @Suppress("UNCHECKED_CAST")
 abstract class AbstractBootstrap<T : AbstractBootstrap<T>> {
 
-    private var channelInitializer: ChannelInitializer? = null
+    private var childInitializer: ChannelInitializer<InitializingNioSocketChannel>? = null
     private var properties: LightyProperties? = null
     private var bufferPool: BufferPool? = null
 
-    fun channelInitializer(channelInitializer: ChannelInitializer): T {
-        this.channelInitializer = channelInitializer;
+    fun childInitializer(childInitializer: ChannelInitializer<InitializingNioSocketChannel>): T {
+        this.childInitializer = childInitializer;
         return this as T
     }
 
@@ -54,16 +54,16 @@ abstract class AbstractBootstrap<T : AbstractBootstrap<T>> {
         if (bufferPool == null) {
             bufferPool = LruBufferPool(DefaultByteBufferAllocator(), properties!!.bufferPoolMaxSize())
         }
-        if (channelInitializer == null) {
+        if (childInitializer == null) {
             throw LightyException("channelInitializer not set")
         }
-        return newConfiguration(properties!!, bufferPool!!, channelInitializer!!)
+        return newConfiguration(properties!!, bufferPool!!, childInitializer!!)
     }
 
     private fun newConfiguration(
         lightyProperties: LightyProperties,
         bufferPool: BufferPool,
-        channelInitializer: ChannelInitializer
+        channelInitializer: ChannelInitializer<InitializingNioSocketChannel>
     ): LightyConfiguration {
         return object : LightyConfiguration {
             override fun lettyProperties(): LightyProperties {
@@ -74,7 +74,7 @@ abstract class AbstractBootstrap<T : AbstractBootstrap<T>> {
                 return bufferPool
             }
 
-            override fun channelInitializer(): ChannelInitializer {
+            override fun channelInitializer(): ChannelInitializer<InitializingNioSocketChannel> {
                 return channelInitializer
             }
         }

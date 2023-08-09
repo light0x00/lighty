@@ -17,6 +17,7 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
 
     private var acceptorGroup: NioEventLoopGroup? = null
     private var workerGroup: NioEventLoopGroup? = null
+    private var initializer: ChannelInitializer<NioServerSocketChannel>? = null
 
     fun group(group: NioEventLoopGroup): ServerBootstrap {
         this.acceptorGroup = group
@@ -30,19 +31,35 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
         return this
     }
 
+    fun initializer(initializer: ChannelInitializer<NioServerSocketChannel>): ServerBootstrap {
+        this.initializer = initializer
+        return this
+    }
+
     fun bind(address: SocketAddress): ListenableFutureTask<NioServerSocketChannel> {
         if (acceptorGroup == null || workerGroup == null) {
             throw LightyException("group not set")
         }
+        if (initializer == null) {
+            initializer = Default_Initializer
+        }
         val configuration = buildConfiguration()
-        return Server(acceptorGroup!!, workerGroup!!, configuration)
+        return Server(acceptorGroup!!, workerGroup!!, initializer!!, configuration)
             .bind(address)
+    }
+
+    companion object {
+        val Default_Initializer = object : ChannelInitializer<NioServerSocketChannel> {
+            override fun initChannel(channel: NioServerSocketChannel) {
+            }
+        }
     }
 
     class Server(
         private val parent: NioEventLoopGroup,
         private val child: NioEventLoopGroup,
-        private val configuration: LightyConfiguration
+        private val initializer: ChannelInitializer<NioServerSocketChannel>,
+        private val configuration: LightyConfiguration,
     ) : Loggable {
         fun bind(address: SocketAddress): ListenableFutureTask<NioServerSocketChannel> {
             val serverChannel = ServerSocketChannel.open(StandardProtocolFamily.INET)
@@ -52,7 +69,7 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
 
             eventLoop
                 .register(serverChannel, SelectionKey.OP_ACCEPT) { key ->
-                    Acceptor(serverChannel, key, eventLoop, child, configuration, bindFuture)
+                    Acceptor(serverChannel, key, eventLoop, child, configuration, initializer, bindFuture)
                 }
                 .addListener {
                     if (it.isSuccess) {
@@ -64,7 +81,6 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
                         bindFuture.setFailure(it.cause())
                     }
                 }
-
             return bindFuture
         }
     }

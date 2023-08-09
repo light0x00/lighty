@@ -17,7 +17,7 @@ import java.util.*
  * @author light0x00
  * @since 2023/8/5
  */
-class InitializingSocketChannel(javaChannel: SocketChannel, var eventExecutor: EventExecutor) :
+class InitializingNioSocketChannel(javaChannel: SocketChannel, var eventExecutor: EventExecutor) :
     ChannelHandlerConfiguration,
     AbstractNioSocketChannel(javaChannel) {
 

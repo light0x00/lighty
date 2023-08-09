@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
@@ -105,7 +106,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
         lettyConf = configuration.lettyProperties();
         bufferPool = configuration.bufferPool();
 
-        var channelConfiguration = new InitializingSocketChannel(javaChannel, eventLoop);
+        var channelConfiguration = new InitializingNioSocketChannel(javaChannel, eventLoop);
 
         configuration.channelInitializer()
                 .initChannel(channelConfiguration);
@@ -134,6 +135,27 @@ public class SocketChannelEventHandler implements NioEventHandler {
                     }
                 }
         );
+    }
+
+    @SneakyThrows
+    public ListenableFutureTask<NioSocketChannel> connect(SocketAddress address) {
+        if (eventLoop.inEventLoop()) {
+            connect0(address);
+        } else {
+            eventLoop.submit(() -> connect0(address));
+        }
+        return connectableFuture;
+    }
+
+    @SneakyThrows
+    private void connect0(SocketAddress address) {
+        try {
+            javaChannel.connect(address);
+        } catch (Throwable t) {
+            connectableFuture.setFailure(t);
+            close();
+            throw t;
+        }
     }
 
     @Override

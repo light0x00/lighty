@@ -4,13 +4,15 @@ import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup;
 import io.github.light0x00.lighty.core.eventloop.SingleThreadExecutorGroup;
 import io.github.light0x00.lighty.core.facade.ChannelInitializer;
-import io.github.light0x00.lighty.core.facade.InitializingSocketChannel;
+import io.github.light0x00.lighty.core.facade.InitializingNioSocketChannel;
 import io.github.light0x00.lighty.core.facade.NioServerSocketChannel;
 import io.github.light0x00.lighty.core.facade.ServerBootstrap;
 import io.github.light0x00.lighty.examples.IdentifierThreadFactory;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.Nonnull;
 import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 
 /**
  * @author light0x00
@@ -25,9 +27,15 @@ public class Utf32Server {
 
         ListenableFutureTask<NioServerSocketChannel> future = new ServerBootstrap()
                 .group(eventLoopGroup)
-                .channelInitializer(new ChannelInitializer() {
+                .initializer(new ChannelInitializer<>() {
                     @Override
-                    public void initChannel(InitializingSocketChannel channel) {
+                    public void initChannel(@Nonnull NioServerSocketChannel channel) {
+                        channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+                    }
+                })
+                .childInitializer(new ChannelInitializer<>() {
+                    @Override
+                    public void initChannel(InitializingNioSocketChannel channel) {
                         channel.pipeline().add(new UTF32Decoder());
                         channel.pipeline().add(handlerExecutorGroup, new ServerMessageHandler());
                         channel.pipeline().add(handlerExecutorGroup, new UTF32Encoder());
@@ -37,7 +45,9 @@ public class Utf32Server {
 
         NioServerSocketChannel channel = future.get();
 
-        log.info("Listen on {}", channel.getLocalAddress());
+//        channel.setOption(StandardSocketOptions.IP_TOS,true);
+
+        log.info("Listen on {}", channel.localAddress());
     }
 
 }

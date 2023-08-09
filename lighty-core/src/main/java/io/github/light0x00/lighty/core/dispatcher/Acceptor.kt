@@ -4,6 +4,7 @@ import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.lighty.core.eventloop.NioEventHandler
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup
+import io.github.light0x00.lighty.core.facade.ChannelInitializer
 import io.github.light0x00.lighty.core.facade.LightyConfiguration
 import io.github.light0x00.lighty.core.facade.NioServerSocketChannel
 import io.github.light0x00.lighty.core.util.Loggable
@@ -22,7 +23,8 @@ class Acceptor(
     private val eventLoop: NioEventLoop,
     private val workerGroup: NioEventLoopGroup,
     private val lightyConfiguration: LightyConfiguration,
-    private val bindFuture: ListenableFutureTask<NioServerSocketChannel>,
+    initializer: ChannelInitializer<NioServerSocketChannel>,
+    private val bindFuture: ListenableFutureTask<NioServerSocketChannel>
 ) : NioEventHandler, Loggable {
 
     val channel: NioServerSocketChannel
@@ -30,11 +32,13 @@ class Acceptor(
     private val closedFuture: ListenableFutureTask<Void> = ListenableFutureTask(null)
 
     init {
-        channel = object : NioServerSocketChannel(javaChannel, key, eventLoop) {
+        channel = object : NioServerSocketChannel(javaChannel) {
             override fun close(): ListenableFutureTask<Void> {
                 return this@Acceptor.close()
             }
         }
+
+        initializer.initChannel(channel)
     }
 
     override fun onEvent(key: SelectionKey) {

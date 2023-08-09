@@ -38,9 +38,9 @@ public class ZeroCopyClientSide {
                     }
 
                 })
-                .channelInitializer(new ChannelInitializer() {
+                .childInitializer(new ChannelInitializer<>() {
                     @Override
-                    public void initChannel(InitializingSocketChannel channel) {
+                    public void initChannel(InitializingNioSocketChannel channel) {
                         log.info("socket receive buffer:{}", channel.getOption(StandardSocketOptions.SO_RCVBUF));
                         channel.pipeline().add(new FileReceiver());
                     }
