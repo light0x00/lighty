@@ -1,24 +1,25 @@
 package io.github.light0x00.lighty.core.facade
 
-import io.github.light0x00.lighty.core.AbstractNioSocketChannel
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.lighty.core.eventloop.EventExecutor
 import io.github.light0x00.lighty.core.eventloop.EventExecutorGroup
-import io.github.light0x00.lighty.core.handler.ChannelHandlerConfiguration
+import io.github.light0x00.lighty.core.handler.ChannelHandler
 import io.github.light0x00.lighty.core.handler.ChannelHandlerExecutorPair
-import io.github.light0x00.lighty.core.handler.adapter.ChannelHandler
-import io.github.light0x00.lighty.core.util.LightyException
 import java.nio.channels.SocketChannel
 import java.util.*
 
 /**
+ * The functionality of this channel decorator is limited.
+ * Usually due to the underlying channel has not been fully constructed.
+ * eg: The tha channel may be registered to a selector but not yet connected.
+ * So that the read/write functionality is not available.
+ *
  * @author light0x00
  * @since 2023/8/5
  */
-class InitializingSocketChannel(javaChannel: SocketChannel, var eventExecutor: EventExecutor) : ChannelHandlerConfiguration,
+class InitializingSocketChannel(javaChannel: SocketChannel, var eventExecutor: EventExecutor) :
+    ChannelHandlerConfiguration,
     AbstractNioSocketChannel(javaChannel) {
-
-    private val handlers: MutableList<ChannelHandler> = LinkedList();
 
     private val handlerExecutorPairs: MutableList<ChannelHandlerExecutorPair<ChannelHandler>> = LinkedList();
 
@@ -39,10 +40,6 @@ class InitializingSocketChannel(javaChannel: SocketChannel, var eventExecutor: E
 
     override fun executorGroup(): EventExecutorGroup<*>? {
         return executorGroup
-    }
-
-    override fun handlers(): MutableList<ChannelHandler> {
-        return handlers
     }
 
     override fun handlerExecutorPair(): MutableList<ChannelHandlerExecutorPair<ChannelHandler>> {

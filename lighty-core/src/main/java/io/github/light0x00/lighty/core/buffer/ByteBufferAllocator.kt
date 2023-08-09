@@ -7,5 +7,5 @@ import java.nio.ByteBuffer
  * @since 2023/7/31
  */
 interface ByteBufferAllocator {
-    fun allocate(capacity: Int) : ByteBuffer
+    fun allocate(capacity: Int): ByteBuffer
 }

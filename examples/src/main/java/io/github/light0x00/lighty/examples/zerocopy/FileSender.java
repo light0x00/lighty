@@ -1,7 +1,7 @@
 package io.github.light0x00.lighty.examples.zerocopy;
 
 import io.github.light0x00.lighty.core.handler.ChannelContext;
-import io.github.light0x00.lighty.core.handler.adapter.ChannelHandlerAdapter;
+import io.github.light0x00.lighty.core.handler.ChannelHandlerAdapter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 

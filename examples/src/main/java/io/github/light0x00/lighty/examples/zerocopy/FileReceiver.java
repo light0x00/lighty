@@ -2,8 +2,8 @@ package io.github.light0x00.lighty.examples.zerocopy;
 
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.handler.ChannelContext;
+import io.github.light0x00.lighty.core.handler.InboundChannelHandlerAdapter;
 import io.github.light0x00.lighty.core.handler.InboundPipeline;
-import io.github.light0x00.lighty.core.handler.adapter.InboundChannelHandlerAdapter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,7 +50,7 @@ class FileReceiver extends InboundChannelHandlerAdapter {
                 log.info("Received: {} bytes", n);
             }
         }
-        ((RecyclableBuffer)data).get();
+        ((RecyclableBuffer) data).get();
     }
 
     @SneakyThrows

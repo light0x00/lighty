@@ -1,7 +1,4 @@
-package io.github.light0x00.lighty.core.handler.adapter;
-
-import io.github.light0x00.lighty.core.handler.ChannelContext;
-import io.github.light0x00.lighty.core.util.Skip;
+package io.github.light0x00.lighty.core.handler;
 
 /**
  * @author light0x00
@@ -12,7 +9,7 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
     @Override
     @Skip
     public void onConnected(ChannelContext context) {
-        
+
     }
 
     @Override

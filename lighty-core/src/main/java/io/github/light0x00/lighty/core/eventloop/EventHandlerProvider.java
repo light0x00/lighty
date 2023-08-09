@@ -1,6 +1,4 @@
-package io.github.light0x00.lighty.core.concurrent;
-
-import io.github.light0x00.lighty.core.handler.NioEventHandler;
+package io.github.light0x00.lighty.core.eventloop;
 
 import java.nio.channels.SelectionKey;
 

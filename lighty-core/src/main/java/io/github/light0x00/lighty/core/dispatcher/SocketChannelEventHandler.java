@@ -1,23 +1,20 @@
-package io.github.light0x00.lighty.core.handler;
+package io.github.light0x00.lighty.core.dispatcher;
 
-import io.github.light0x00.lighty.core.AbstractNioSocketChannel;
-import io.github.light0x00.lighty.core.LightyConfiguration;
-import io.github.light0x00.lighty.core.LightyProperties;
 import io.github.light0x00.lighty.core.buffer.BufferPool;
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.eventloop.EventExecutor;
 import io.github.light0x00.lighty.core.eventloop.EventExecutorGroup;
+import io.github.light0x00.lighty.core.eventloop.NioEventHandler;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop;
-import io.github.light0x00.lighty.core.facade.InitializingSocketChannel;
-import io.github.light0x00.lighty.core.handler.adapter.DuplexChannelHandler;
-import io.github.light0x00.lighty.core.util.LightyException;
+import io.github.light0x00.lighty.core.facade.*;
+import io.github.light0x00.lighty.core.handler.ChannelContext;
+import io.github.light0x00.lighty.core.handler.DuplexChannelHandler;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -78,7 +75,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
      */
     protected final EventExecutor handlerExecutor;
 
-    final ChannelHandlerDispatcher dispatcher;
+    protected final ChannelHandlerDispatcher dispatcher;
 
     /**
      * 用于反馈握手的结果,成功或失败
@@ -385,17 +382,17 @@ public class SocketChannelEventHandler implements NioEventHandler {
         }
     }
 
-    @NotNull
+    @Nonnull
     private ChannelContext buildContext() {
         return new ChannelContext() {
 
-            @NotNull
+            @Nonnull
             @Override
             public NioSocketChannel channel() {
                 return channel;
             }
 
-            @NotNull
+            @Nonnull
             @Override
             public RecyclableBuffer allocateBuffer(int capacity) {
                 return bufferPool.take(capacity);

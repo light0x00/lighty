@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.core.buffer;
 
-import io.github.light0x00.lighty.core.util.LightyException;
+import io.github.light0x00.lighty.core.facade.LightyException;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.concurrent.GuardedBy;

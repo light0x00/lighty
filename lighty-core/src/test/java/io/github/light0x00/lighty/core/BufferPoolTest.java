@@ -2,7 +2,7 @@ package io.github.light0x00.lighty.core;
 
 
 import io.github.light0x00.lighty.core.buffer.DefaultBufferPool;
-import io.github.light0x00.lighty.core.util.LightyException;
+import io.github.light0x00.lighty.core.facade.LightyException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

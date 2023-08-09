@@ -1,8 +1,8 @@
 package io.github.light0x00.lighty.examples.utf32;
 
 import io.github.light0x00.lighty.core.handler.ChannelContext;
+import io.github.light0x00.lighty.core.handler.DuplexChannelHandlerAdapter;
 import io.github.light0x00.lighty.core.handler.InboundPipeline;
-import io.github.light0x00.lighty.core.handler.adapter.DuplexChannelHandlerAdapter;
 import lombok.extern.slf4j.Slf4j;
 
 /**

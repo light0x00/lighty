@@ -75,7 +75,7 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
     }
 
     @SneakyThrows
-    public T sync(){
+    public T sync() {
         return super.get();
     }
 
@@ -200,7 +200,7 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
         return listenableFutureTask;
     }
 
-    public static <T> ListenableFutureTask<T> successFuture(){
+    public static <T> ListenableFutureTask<T> successFuture() {
         ListenableFutureTask<T> future = new ListenableFutureTask<>(null);
         future.setSuccess();
         return future;

@@ -1,9 +1,9 @@
 package io.github.light0x00.lighty.examples.zerocopy;
 
-import io.github.light0x00.lighty.core.ServerBootstrap;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup;
 import io.github.light0x00.lighty.core.facade.ChannelInitializer;
 import io.github.light0x00.lighty.core.facade.InitializingSocketChannel;
+import io.github.light0x00.lighty.core.facade.ServerBootstrap;
 import io.github.light0x00.lighty.examples.IdentifierThreadFactory;
 import lombok.extern.slf4j.Slf4j;
 

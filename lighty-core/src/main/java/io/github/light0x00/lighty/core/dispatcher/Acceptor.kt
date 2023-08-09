@@ -1,9 +1,11 @@
-package io.github.light0x00.lighty.core.handler
+package io.github.light0x00.lighty.core.dispatcher
 
-import io.github.light0x00.lighty.core.LightyConfiguration
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
+import io.github.light0x00.lighty.core.eventloop.NioEventHandler
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup
+import io.github.light0x00.lighty.core.facade.LightyConfiguration
+import io.github.light0x00.lighty.core.facade.NioServerSocketChannel
 import io.github.light0x00.lighty.core.util.Loggable
 import io.github.light0x00.lighty.core.util.log
 import java.net.SocketAddress
@@ -43,11 +45,12 @@ class Acceptor(
 
         workerEventLoop
             .register(incomingChannel, SelectionKey.OP_READ) { selectionKey: SelectionKey? ->
-                object : SocketChannelEventHandler(workerEventLoop, incomingChannel, selectionKey, lightyConfiguration) {
+                object :
+                    SocketChannelEventHandler(workerEventLoop, incomingChannel, selectionKey, lightyConfiguration) {
                     // 对于 server 侧的 SocketChannel 而言, 其 connected 事件, 在 ServerSocketChannel acceptable 时就触发
                     init {
-                        dispatcher.onConnected()
-                        connectableFuture.setSuccess(channel)
+                        this.dispatcher.onConnected()
+                        this.connectableFuture.setSuccess(this.channel)
                     }
                 }
             }
@@ -93,5 +96,12 @@ class Acceptor(
 
         log.debug("Release resource associated with channel {}", name)
         closedFuture.setSuccess()
+    }
+
+    class SocketChannelEventHandler2 : SocketChannelEventHandler(null, null, null, null, null) {
+        init {
+            this.dispatcher.onConnected()
+            this.connectableFuture.setSuccess(this.channel)
+        }
     }
 }

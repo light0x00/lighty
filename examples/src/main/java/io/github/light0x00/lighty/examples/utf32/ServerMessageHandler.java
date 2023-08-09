@@ -1,8 +1,8 @@
 package io.github.light0x00.lighty.examples.utf32;
 
 import io.github.light0x00.lighty.core.handler.ChannelContext;
+import io.github.light0x00.lighty.core.handler.DuplexChannelHandlerAdapter;
 import io.github.light0x00.lighty.core.handler.InboundPipeline;
-import io.github.light0x00.lighty.core.handler.adapter.DuplexChannelHandlerAdapter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
  * @since 2023/7/13
  */
 @Slf4j
-class ServerMessageHandler extends DuplexChannelHandlerAdapter  {
+class ServerMessageHandler extends DuplexChannelHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelContext context, Throwable t) {

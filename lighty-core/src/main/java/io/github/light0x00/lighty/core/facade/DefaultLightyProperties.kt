@@ -1,4 +1,4 @@
-package io.github.light0x00.lighty.core
+package io.github.light0x00.lighty.core.facade
 
 /**
  * @author light0x00

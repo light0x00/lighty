@@ -1,4 +1,4 @@
-package io.github.light0x00.lighty.core.util
+package io.github.light0x00.lighty.core.facade
 
 import org.slf4j.helpers.MessageFormatter
 

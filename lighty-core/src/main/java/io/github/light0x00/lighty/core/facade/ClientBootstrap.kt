@@ -1,10 +1,8 @@
-package io.github.light0x00.lighty.core
+package io.github.light0x00.lighty.core.facade
 
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
+import io.github.light0x00.lighty.core.dispatcher.SocketChannelEventHandler
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup
-import io.github.light0x00.lighty.core.handler.NioSocketChannel
-import io.github.light0x00.lighty.core.handler.SocketChannelEventHandler
-import io.github.light0x00.lighty.core.util.LightyException
 import java.net.SocketAddress
 import java.nio.channels.SelectionKey
 import java.nio.channels.SocketChannel
@@ -52,7 +50,13 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
                     2. 如果 connect 失败, 则需要 deregister
                      */
                     channel.connect(address)
-                    SocketChannelEventHandler(eventLoop, channel, key, configuration, connectableFuture)
+                    SocketChannelEventHandler(
+                        eventLoop,
+                        channel,
+                        key,
+                        configuration,
+                        connectableFuture
+                    )
                 }
             return connectableFuture
         }

@@ -32,9 +32,9 @@ public class Tool {
         //So ,we got a positive number now.
         //The next step just execute OR operation to combine the four part as an integer.
         return b[0] << 24 |
-               (b[1] & 0xFF) << 16 |
-               (b[2] & 0xFF) << 8 |
-               (b[3] & 0xFF);
+                (b[1] & 0xFF) << 16 |
+                (b[2] & 0xFF) << 8 |
+                (b[3] & 0xFF);
     }
 
     @SneakyThrows
@@ -43,8 +43,8 @@ public class Tool {
     }
 
     @SneakyThrows
-    public static Method getMethod(Object obj, String methodName, Class<?>... parameterTypes){
-        return obj.getClass().getMethod(methodName,parameterTypes);
+    public static Method getMethod(Object obj, String methodName, Class<?>... parameterTypes) {
+        return obj.getClass().getMethod(methodName, parameterTypes);
     }
 
     public static String slf4jFormat(String pattern, Object... args) {

@@ -1,12 +1,8 @@
 package io.github.light0x00.lighty.examples.zerocopy;
 
-import io.github.light0x00.lighty.core.ClientBootstrap;
-import io.github.light0x00.lighty.core.DefaultLightyProperties;
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup;
-import io.github.light0x00.lighty.core.facade.ChannelInitializer;
-import io.github.light0x00.lighty.core.facade.InitializingSocketChannel;
-import io.github.light0x00.lighty.core.handler.NioSocketChannel;
+import io.github.light0x00.lighty.core.facade.*;
 import io.github.light0x00.lighty.examples.IdentifierThreadFactory;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,7 +26,7 @@ public class ZeroCopyClientSide {
 
                     @Override
                     public int bufferPoolMaxSize() {
-                        return 1024 * 1024*2;
+                        return 1024 * 1024 * 2;
                     }
 
                     @Override

@@ -1,4 +1,4 @@
-package io.github.light0x00.lighty.core.util;
+package io.github.light0x00.lighty.core.eventloop;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;

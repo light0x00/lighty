@@ -1,7 +1,6 @@
 package io.github.light0x00.lighty.core.eventloop;
 
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
-import io.github.light0x00.lighty.core.util.Chooser;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 

@@ -1,9 +1,7 @@
 package io.github.light0x00.lighty.core.eventloop;
 
-import io.github.light0x00.lighty.core.concurrent.EventHandlerProvider;
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.concurrent.RejectedExecutionHandler;
-import io.github.light0x00.lighty.core.handler.NioEventHandler;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -121,6 +119,7 @@ public class NioEventLoop implements EventExecutor {
             return submit(() -> register0(channel, interestOps, eventHandlerProvider));
         }
     }
+
     @SneakyThrows
     @Nonnull
     private <T extends NioEventHandler> T register0(SelectableChannel channel, int interestOps, EventHandlerProvider<T> eventHandlerProvider) {

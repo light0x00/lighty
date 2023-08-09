@@ -1,4 +1,4 @@
-package io.github.light0x00.lighty.core.handler.adapter;
+package io.github.light0x00.lighty.core.handler;
 
 /**
  * @author light0x00

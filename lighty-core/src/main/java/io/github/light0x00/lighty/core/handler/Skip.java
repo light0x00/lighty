@@ -1,4 +1,4 @@
-package io.github.light0x00.lighty.core.util;
+package io.github.light0x00.lighty.core.handler;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

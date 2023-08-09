@@ -1,10 +1,8 @@
-package io.github.light0x00.lighty.core
+package io.github.light0x00.lighty.core.facade
 
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
+import io.github.light0x00.lighty.core.dispatcher.Acceptor
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup
-import io.github.light0x00.lighty.core.handler.Acceptor
-import io.github.light0x00.lighty.core.handler.NioServerSocketChannel
-import io.github.light0x00.lighty.core.util.LightyException
 import io.github.light0x00.lighty.core.util.Loggable
 import java.net.SocketAddress
 import java.net.StandardProtocolFamily

@@ -9,9 +9,8 @@ import org.slf4j.LoggerFactory
  * @author light0x00
  * @since 2023/7/31
  */
-interface Loggable {
 
-}
+interface Loggable
 
 val Loggable.log: Logger
     get() {

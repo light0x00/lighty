@@ -1,7 +1,6 @@
-package io.github.light0x00.lighty.core;
+package io.github.light0x00.lighty.core.facade;
 
 import io.github.light0x00.lighty.core.buffer.BufferPool;
-import io.github.light0x00.lighty.core.facade.ChannelInitializer;
 
 /**
  * @author light0x00

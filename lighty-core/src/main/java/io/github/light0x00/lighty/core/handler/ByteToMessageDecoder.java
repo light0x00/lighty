@@ -2,8 +2,7 @@ package io.github.light0x00.lighty.core.handler;
 
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
-import io.github.light0x00.lighty.core.handler.adapter.InboundChannelHandlerAdapter;
-import io.github.light0x00.lighty.core.util.LightyException;
+import io.github.light0x00.lighty.core.facade.LightyException;
 
 /**
  * @author light0x00
@@ -31,7 +30,7 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
 
     @Override
     public void onRead(ChannelContext context, Object data, InboundPipeline next) {
-        try(RecyclableBuffer srcBuf = (RecyclableBuffer) data){
+        try (RecyclableBuffer srcBuf = (RecyclableBuffer) data) {
 
             while (srcBuf.remainingCanGet() > 0) {
                 decodeBuf.put(srcBuf, Math.min(decodeBuf.remainingCanPut(), srcBuf.remainingCanGet()));

@@ -2,9 +2,8 @@ package io.github.light0x00.lighty.examples.utf32;
 
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.handler.ChannelContext;
+import io.github.light0x00.lighty.core.handler.OutboundChannelHandlerAdapter;
 import io.github.light0x00.lighty.core.handler.OutboundPipeline;
-import io.github.light0x00.lighty.core.handler.adapter.OutboundChannelHandlerAdapter;
-import io.github.light0x00.lighty.core.util.Tool;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -42,7 +41,7 @@ public class UTF32Encoder extends OutboundChannelHandlerAdapter {
                         f -> {
                             log.info("write result:{}", f.isSuccess());
                         }
-                ) ;
+                );
     }
 
 }

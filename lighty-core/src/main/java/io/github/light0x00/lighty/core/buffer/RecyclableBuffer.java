@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.core.buffer;
 
-import io.github.light0x00.lighty.core.util.LightyException;
+import io.github.light0x00.lighty.core.facade.LightyException;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -296,7 +296,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public void close(){
+    public void close() {
         release();
     }
 }

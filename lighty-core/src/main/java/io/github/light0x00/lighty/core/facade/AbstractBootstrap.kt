@@ -1,10 +1,8 @@
-package io.github.light0x00.lighty.core
+package io.github.light0x00.lighty.core.facade
 
 import io.github.light0x00.lighty.core.buffer.BufferPool
 import io.github.light0x00.lighty.core.buffer.DefaultByteBufferAllocator
 import io.github.light0x00.lighty.core.buffer.LruBufferPool
-import io.github.light0x00.lighty.core.facade.ChannelInitializer
-import io.github.light0x00.lighty.core.util.LightyException
 
 /**
  * @author light0x00

@@ -22,7 +22,7 @@ import java.util.Objects;
  * @since 2023/7/5
  */
 @NotThreadSafe
-public class RingBuffer  {
+public class RingBuffer {
 
     private final ByteBuffer buffer;
 

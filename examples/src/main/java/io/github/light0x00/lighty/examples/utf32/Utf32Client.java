@@ -1,11 +1,11 @@
 package io.github.light0x00.lighty.examples.utf32;
 
-import io.github.light0x00.lighty.core.facade.ChannelInitializer;
-import io.github.light0x00.lighty.core.ClientBootstrap;
-import io.github.light0x00.lighty.core.facade.InitializingSocketChannel;
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup;
-import io.github.light0x00.lighty.core.handler.NioSocketChannel;
+import io.github.light0x00.lighty.core.facade.ChannelInitializer;
+import io.github.light0x00.lighty.core.facade.ClientBootstrap;
+import io.github.light0x00.lighty.core.facade.InitializingSocketChannel;
+import io.github.light0x00.lighty.core.facade.NioSocketChannel;
 import io.github.light0x00.lighty.examples.IdentifierThreadFactory;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,6 +41,11 @@ public class Utf32Client {
         channel.closeFuture().sync();
         eventLoopGroup.shutdown();
 
+//        new SocketChannelEventHandler(null,null,null,null,null){
+//            {
+//                this.connectableFuture.setSuccess();
+//            }
+//        };
     }
 
 }
