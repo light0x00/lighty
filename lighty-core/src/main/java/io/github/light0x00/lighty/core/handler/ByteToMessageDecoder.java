@@ -19,12 +19,12 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
     }
 
     @Override
-    public void onConnected(ChannelContext context) {
+    public void onInitialize(ChannelContext context) {
         decodeBuf = context.allocateBuffer(bufSize);
     }
 
     @Override
-    public void onClosed(ChannelContext context) {
+    public void onDestroy(ChannelContext context) {
         decodeBuf.release();
     }
 

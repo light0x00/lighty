@@ -58,7 +58,10 @@ public class LruBufferPool extends BufferPool {
     @Override
     public RecyclableBuffer take(int acquireCapacity) {
         ByteBuffer byteBuffer = takeAtLeast(acquireCapacity)
-                .map(ByteBuffer::clear)
+                .map((buf) -> {
+                    log.debug("Reuse buffer: {} bytes", buf.capacity());
+                    return buf.clear();
+                })
                 .orElseGet(() -> {
                     log.debug("Allocate buffer: {} bytes", acquireCapacity);
                     return bufferAllocator.allocate(acquireCapacity);

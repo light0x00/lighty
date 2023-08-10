@@ -99,9 +99,7 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
         try {
             super.get();
             return null;
-        } catch (ExecutionException e) {
-            return e.getCause();
-        } catch (InterruptedException e) {
+        } catch (ExecutionException | InterruptedException e) {
             return e;
         }
     }

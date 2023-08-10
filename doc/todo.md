@@ -26,4 +26,6 @@
     - 而另一面, 如果每次装载就绪数据时, 缓冲区都有很多剩余空间, 则意味着缓冲区大了, 下次应该分配更小的.
   > 实现此功能的目的在于, 减少系统调用的次数, 提升性能.
   > 这种弹性能力, 能更好的适配应用层协议的特征. 比如大文件传输协议, 往往数据总是大批量的到来. 而 rpc 协议, 数据总是小段的到来.
-- [ ] 支持对 socket 的配置, 比如 tcp 的 receive buffer size
+- [x] 支持对 socket 的配置, 比如 tcp 的 receive buffer size
+- [ ] 依靠 channel 的生命周期是不够的, 在连接失败(如 Connection refused)时, onConnected/onClosed? 都不会触发, 需要实现 初始化、销毁的生命周期勾子
+- [ ] SocketChannelEventHandler 作为抽象类, 作为模版方法基类，让子类 Server/Client 继承  

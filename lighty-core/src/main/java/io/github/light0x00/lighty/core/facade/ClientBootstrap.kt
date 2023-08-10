@@ -2,7 +2,7 @@ package io.github.light0x00.lighty.core.facade
 
 import io.github.light0x00.lighty.core.concurrent.FutureListener
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
-import io.github.light0x00.lighty.core.dispatcher.SocketChannelEventHandler
+import io.github.light0x00.lighty.core.dispatcher.SocketChannelEventHandlerC
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup
 import java.net.SocketAddress
 import java.nio.channels.SelectionKey
@@ -16,8 +16,15 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
 
     private var group: NioEventLoopGroup? = null
 
+    private var initializer: ChannelInitializer<InitializingNioSocketChannel>? = null
+
     fun group(group: NioEventLoopGroup): ClientBootstrap {
         this.group = group
+        return this
+    }
+
+    fun initializer(initializer: ChannelInitializer<InitializingNioSocketChannel>): ClientBootstrap {
+        this.initializer = initializer
         return this
     }
 
@@ -25,10 +32,18 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
         if (group == null) {
             throw LightyException("group not set")
         }
-        return Client(group!!, buildConfiguration()).connect(address)
+        if (initializer == null) {
+            throw LightyException("initializer not set")
+        }
+
+        return Client(initializer!!, group!!, buildConfiguration()).connect(address)
     }
 
-    private class Client(private val group: NioEventLoopGroup, private var configuration: LightyConfiguration) {
+    private class Client(
+        private val initializer: ChannelInitializer<InitializingNioSocketChannel>,
+        private val group: NioEventLoopGroup,
+        private var configuration: LightyConfiguration
+    ) {
 
         fun connect(address: SocketAddress?): ListenableFutureTask<NioSocketChannel> {
             val channel = SocketChannel.open()
@@ -37,11 +52,11 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
             val eventLoop = group.next()
             eventLoop
                 .register(channel, SelectionKey.OP_CONNECT) { key: SelectionKey ->
-
-                    SocketChannelEventHandler(
+                    SocketChannelEventHandlerC(
                         eventLoop,
                         channel,
                         key,
+                        initializer,
                         configuration,
                         connectableFuture
                     )

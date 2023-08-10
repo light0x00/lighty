@@ -14,20 +14,22 @@ class ClientMessageHandler extends DuplexChannelHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelContext context, Throwable t) {
-
+        log.info("exceptionCaught",t);
     }
 
     @Override
     public void onConnected(ChannelContext context) {
-//        context.channel().write("hello world");
-//        context.channel().close();
-        log.info("{}", context.channel().localAddress());
+        log.info("onConnected: {}", context.channel().remoteAddress());
+    }
+
+    @Override
+    public void onClosed(ChannelContext context) {
+        log.info("onClosed: {}",context.channel().localAddress());
     }
 
     @Override
     public void onRead(ChannelContext context, Object data, InboundPipeline next) {
         log.info("onRead: {}", data);
-
         context.channel().write("ACK:" + data);
     }
 }

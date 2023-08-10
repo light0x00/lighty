@@ -13,19 +13,19 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UTF32Encoder extends OutboundChannelHandlerAdapter {
 
+    static final int MESSAGE_DELIMITER = "\n".codePointAt(0);
+
     @Override
     public void onWrite(ChannelContext context, Object msg, OutboundPipeline next) {
-        log.info("encode..");
-
         String str = ((String) msg);
 
-        int capacity = str.codePointCount(0, str.length()) * 4;
-
+        int capacity = str.codePointCount(0, str.length()) * 4 + 4;
         RecyclableBuffer buf = context.allocateBuffer(capacity);
 
         str.codePoints().forEach(buf::putInt);
+        buf.putInt(MESSAGE_DELIMITER);
 
-        context.channel().write(buf)
+        next.invoke(buf)
                 .addListener(
                         f -> {
                             if (f.isSuccess()) {
@@ -33,13 +33,6 @@ public class UTF32Encoder extends OutboundChannelHandlerAdapter {
                             } else {
                                 f.cause().printStackTrace();
                             }
-                        }
-                );
-
-        next.invoke(Tool.intToBytes("\n".codePointAt(0)))
-                .addListener(
-                        f -> {
-                            log.info("write result:{}", f.isSuccess());
                         }
                 );
     }

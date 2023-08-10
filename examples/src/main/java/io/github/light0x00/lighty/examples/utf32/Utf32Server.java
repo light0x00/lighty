@@ -45,8 +45,6 @@ public class Utf32Server {
 
         NioServerSocketChannel channel = future.get();
 
-//        channel.setOption(StandardSocketOptions.IP_TOS,true);
-
         log.info("Listen on {}", channel.localAddress());
     }
 

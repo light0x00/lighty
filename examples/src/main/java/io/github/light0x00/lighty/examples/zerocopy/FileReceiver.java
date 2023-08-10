@@ -50,7 +50,6 @@ class FileReceiver extends InboundChannelHandlerAdapter {
                 log.info("Received: {} bytes", n);
             }
         }
-        ((RecyclableBuffer) data).get();
     }
 
     @SneakyThrows

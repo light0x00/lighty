@@ -207,14 +207,14 @@ public class NioEventLoop implements EventExecutor {
             invokeClose(handler);
         }
         selector.close();
-        log.debug("All the resources associated with event loop released");
+        log.debug("All the resources associated with event loop {} released", this.toString());
 
         shutdownFuture.setSuccess();
     }
 
     private static void invokeClose(NioEventHandler handler) {
         try {
-            handler.close();
+            handler.shutdown();
         } catch (Throwable t) {
             log.warn(slf4jFormat("An exception was thrown by handler's close: {}", handler), t);
         }

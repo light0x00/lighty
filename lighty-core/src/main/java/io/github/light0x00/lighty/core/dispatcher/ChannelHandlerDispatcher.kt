@@ -26,6 +26,8 @@ class ChannelHandlerDispatcher(
 
     private var inboundChain: InboundPipelineInvocation
     private var outboundChain: OutboundPipelineInvocation
+    private val initializeEventObservers: MutableSet<ChannelHandlerExecutorPair<ChannelHandler>>
+    private val destroyEventObservers: MutableSet<ChannelHandlerExecutorPair<ChannelHandler>>
     private val connectedEventObservers: MutableSet<ChannelHandlerExecutorPair<ChannelHandler>>
     private val readCompletedEventObservers: MutableSet<ChannelHandlerExecutorPair<ChannelHandler>>
     private val closedEventObservers: MutableSet<ChannelHandlerExecutorPair<ChannelHandler>>
@@ -36,6 +38,9 @@ class ChannelHandlerDispatcher(
     @get:JvmName("connectedFuture")
     val connectedFuture: ListenableFutureTask<Void> = ListenableFutureTask(null)
 
+    @get:JvmName("readCompletedFuture")
+    val readCompletedFuture: ListenableFutureTask<Void> = ListenableFutureTask(null)
+
     /**
      * Triggered when the connection closed.
      */
@@ -45,6 +50,8 @@ class ChannelHandlerDispatcher(
     init {
         val inboundHandlers = LinkedList<ChannelHandlerExecutorPair<InboundChannelHandler>>()
         val outboundHandlers = LinkedList<ChannelHandlerExecutorPair<OutboundChannelHandler>>()
+        initializeEventObservers = HashSet()
+        destroyEventObservers = HashSet()
         connectedEventObservers = HashSet()
         readCompletedEventObservers = HashSet()
         closedEventObservers = HashSet()
@@ -64,6 +71,14 @@ class ChannelHandlerDispatcher(
                     @Suppress("UNCHECKED_CAST")
                     outboundHandlers.add(pair as ChannelHandlerExecutorPair<OutboundChannelHandler>)
                 }
+            }
+
+            if (!skipInitializeEvent(handler)) {
+                initializeEventObservers.add(pair)
+            }
+
+            if (!skipDestroyEvent(handler)) {
+                destroyEventObservers.add(pair)
             }
 
             if (!skipConnectedEvent(handler)) {
@@ -96,7 +111,26 @@ class ChannelHandlerDispatcher(
                 }
             }
         }
-        connectedFuture.setSuccess()
+    }
+
+    fun onInitialize() {
+        for ((handler, executor) in initializeEventObservers) {
+            if (executor.inEventLoop()) {
+                onInitialize0(handler)
+            } else {
+                executor.execute { onInitialize0(handler) }
+            }
+        }
+    }
+
+    fun onDestroy() {
+        for ((handler, executor) in destroyEventObservers) {
+            if (executor.inEventLoop()) {
+                onDestroy0(handler)
+            } else {
+                executor.execute { onDestroy0(handler) }
+            }
+        }
     }
 
     fun onReadCompleted() {
@@ -117,7 +151,6 @@ class ChannelHandlerDispatcher(
                 executor.execute { onClosed0(context, handler) }
             }
         }
-        closedFuture.setSuccess()
     }
 
     fun input(buf: RecyclableBuffer?) {
@@ -195,6 +228,23 @@ class ChannelHandlerDispatcher(
         } catch (throwable: Throwable) {
             invokeExceptionCaught(handler, context, throwable)
         }
+        connectedFuture.setSuccess()
+    }
+
+    private fun onInitialize0(observer: ChannelHandler) {
+        try {
+            observer.onInitialize(context)
+        } catch (throwable: Throwable) {
+            invokeExceptionCaught(observer, context, throwable)
+        }
+    }
+
+    private fun onDestroy0(observer: ChannelHandler) {
+        try {
+            observer.onDestroy(context)
+        } catch (throwable: Throwable) {
+            invokeExceptionCaught(observer, context, throwable)
+        }
     }
 
     private fun onReadCompleted0(observer: ChannelHandler) {
@@ -203,6 +253,7 @@ class ChannelHandlerDispatcher(
         } catch (throwable: Throwable) {
             invokeExceptionCaught(observer, context, throwable)
         }
+        readCompletedFuture.setSuccess()
     }
 
     private fun onClosed0(context: ChannelContext, observer: ChannelHandler) {
@@ -211,6 +262,7 @@ class ChannelHandlerDispatcher(
         } catch (throwable: Throwable) {
             invokeExceptionCaught(observer, context, throwable)
         }
+        closedFuture.setSuccess()
     }
 
 
@@ -261,6 +313,14 @@ class ChannelHandlerDispatcher(
             }
             return invocation
         }
+
+        private fun skipInitializeEvent(handler: ChannelHandler) =
+            getMethod(handler, "onInitialize", ChannelContext::class.java)
+                .isAnnotationPresent(Skip::class.java)
+
+        private fun skipDestroyEvent(handler: ChannelHandler) =
+            getMethod(handler, "onDestroy", ChannelContext::class.java)
+                .isAnnotationPresent(Skip::class.java)
 
         private fun skipConnectedEvent(handler: ChannelHandler) =
             getMethod(handler, "onConnected", ChannelContext::class.java)

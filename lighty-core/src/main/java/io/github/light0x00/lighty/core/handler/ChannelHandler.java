@@ -8,6 +8,10 @@ public interface ChannelHandler {
 
     void exceptionCaught(ChannelContext context, Throwable t);
 
+    void onInitialize(ChannelContext context);
+
+    void onDestroy(ChannelContext context);
+
     void onConnected(ChannelContext context);
 
     void onReadCompleted(ChannelContext context);

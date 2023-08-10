@@ -8,6 +8,18 @@ public abstract class ChannelHandlerAdapter implements ChannelHandler {
 
     @Override
     @Skip
+    public void onInitialize(ChannelContext context) {
+
+    }
+
+    @Override
+    @Skip
+    public void onDestroy(ChannelContext context) {
+
+    }
+
+    @Override
+    @Skip
     public void onConnected(ChannelContext context) {
 
     }

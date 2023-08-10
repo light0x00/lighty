@@ -21,7 +21,7 @@ public class Utf32Client {
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("io"));
 
         ListenableFutureTask<NioSocketChannel> connectFuture = new ClientBootstrap()
-                .childInitializer(new ChannelInitializer<InitializingNioSocketChannel>() {
+                .initializer(new ChannelInitializer<InitializingNioSocketChannel>() {
                     @Override
                     public void initChannel(InitializingNioSocketChannel channel) {
                         channel.executorGroup(eventLoopGroup);

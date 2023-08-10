@@ -18,6 +18,7 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
     private var acceptorGroup: NioEventLoopGroup? = null
     private var workerGroup: NioEventLoopGroup? = null
     private var initializer: ChannelInitializer<NioServerSocketChannel>? = null
+    private var childInitializer: ChannelInitializer<InitializingNioSocketChannel>? = null
 
     fun group(group: NioEventLoopGroup): ServerBootstrap {
         this.acceptorGroup = group
@@ -36,6 +37,11 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
         return this
     }
 
+    fun childInitializer(childInitializer: ChannelInitializer<InitializingNioSocketChannel>): ServerBootstrap {
+        this.childInitializer = childInitializer;
+        return this
+    }
+
     fun bind(address: SocketAddress): ListenableFutureTask<NioServerSocketChannel> {
         if (acceptorGroup == null || workerGroup == null) {
             throw LightyException("group not set")
@@ -43,8 +49,12 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
         if (initializer == null) {
             initializer = Default_Initializer
         }
+        if (childInitializer == null) {
+            throw LightyException("childInitializer not set")
+        }
+
         val configuration = buildConfiguration()
-        return Server(acceptorGroup!!, workerGroup!!, initializer!!, configuration)
+        return Server(acceptorGroup!!, workerGroup!!, initializer!!, childInitializer!!, configuration)
             .bind(address)
     }
 
@@ -59,7 +69,8 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
         private val parent: NioEventLoopGroup,
         private val child: NioEventLoopGroup,
         private val initializer: ChannelInitializer<NioServerSocketChannel>,
-        private val configuration: LightyConfiguration,
+        private val childInitializer: ChannelInitializer<InitializingNioSocketChannel>,
+        private val configuration: LightyConfiguration
     ) : Loggable {
         fun bind(address: SocketAddress): ListenableFutureTask<NioServerSocketChannel> {
             val serverChannel = ServerSocketChannel.open(StandardProtocolFamily.INET)
@@ -69,7 +80,16 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
 
             eventLoop
                 .register(serverChannel, SelectionKey.OP_ACCEPT) { key ->
-                    Acceptor(serverChannel, key, eventLoop, child, configuration, initializer, bindFuture)
+                    Acceptor(
+                        serverChannel,
+                        key,
+                        initializer,
+                        childInitializer,
+                        eventLoop,
+                        child,
+                        configuration,
+                        bindFuture
+                    )
                 }
                 .addListener {
                     if (it.isSuccess) {

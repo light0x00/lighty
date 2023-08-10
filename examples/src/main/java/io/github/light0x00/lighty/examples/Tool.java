@@ -1,4 +1,4 @@
-package io.github.light0x00.lighty.examples.utf32;
+package io.github.light0x00.lighty.examples;
 
 /**
  * @author light0x00

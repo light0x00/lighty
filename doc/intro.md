@@ -9,13 +9,41 @@
     - RingBuffer
     - release 机制(读写锁解决并发问题)
 - ChannelHandler 设计(责任链、观察者、写缓冲队列)
+    - 生命周期
     - OutboundPipeline 中执行 write操作, 如何避免死循环问题.
 - 边界情况处理
     - 连接关闭,半开连接(一方关闭)
 
 ---
 
-## 缓冲池设计
+##  ChannelHandler 设计
+
+- onInitialize, Handler 实例初始化后(onConnected 之前)执行
+- onConnected, 成功建立连接后执行(3-way-handshake 成功)
+- onRead / onWrite
+- onClosed, 触发时机: 连接建立成功的情况下(以 onConnected 被触发为依据), 某一方调用 close, 或者双方先后 shutdownOutput 之后 
+- onDestroy, Handler 被销毁时执行
+
+```plantuml
+@startuml
+hide empty description
+
+start
+:onInitialize;
+:TCP 3-Way-Handshake;
+if () then(success)
+:onConnected;
+:onRead/onWrite;
+:TCP 4-Way-Handshake;
+else(failure)
+endif
+:onDestroy;
+
+stop
+@enduml
+```
+
+## 缓冲区复用设计
 
 动机:
 

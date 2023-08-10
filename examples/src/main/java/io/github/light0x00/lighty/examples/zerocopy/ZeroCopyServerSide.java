@@ -35,7 +35,8 @@ public class ZeroCopyServerSide {
                         );
                     }
                 })
-                .bind(new InetSocketAddress(9000));
+                .bind(new InetSocketAddress(9000))
+                .sync();
     }
 
 }

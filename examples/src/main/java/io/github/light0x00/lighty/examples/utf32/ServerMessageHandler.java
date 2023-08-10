@@ -22,13 +22,14 @@ class ServerMessageHandler extends DuplexChannelHandlerAdapter {
         log.info("onConnected");
         context.channel().write("hello world")
                 .addListener(
-                        (f) -> context.channel().close()
+                        (f) -> log.info("write result:{}", f.isSuccess())
                 );
     }
 
     @Override
     public void onRead(ChannelContext context, Object data, InboundPipeline next) {
         log.info("onRead: {}", data);
+        context.channel().close();
     }
 
 }

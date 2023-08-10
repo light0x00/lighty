@@ -4,6 +4,7 @@ import io.github.light0x00.lighty.core.buffer.BufferPool;
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
+import io.github.light0x00.lighty.core.concurrent.SuccessFutureListener;
 import io.github.light0x00.lighty.core.eventloop.EventExecutor;
 import io.github.light0x00.lighty.core.eventloop.EventExecutorGroup;
 import io.github.light0x00.lighty.core.eventloop.NioEventHandler;
@@ -18,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * @since 2023/6/29
  */
 @Slf4j
-public class SocketChannelEventHandler implements NioEventHandler {
+public abstract class SocketChannelEventHandler implements NioEventHandler {
 
     protected final NioEventLoop eventLoop;
 
@@ -61,7 +61,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
      * @implNote Be aware that should only be access by current event loop thread,
      * cannot be shared between threads.
      */
-    private boolean outputClosed;
+    private boolean outputClosed = true;
 
     /**
      * 当前端是否发送了 FIN 包, 这意味着不会再写入更多数据到 socket 写缓冲区
@@ -69,7 +69,9 @@ public class SocketChannelEventHandler implements NioEventHandler {
      * @implNote Be aware that should only be access by current event loop thread,
      * cannot be shared between threads.
      */
-    private boolean inputClosed;
+    private boolean inputClosed = true;
+
+    private boolean destroyed = false;
 
     /**
      * 用于执行责任链和观察者
@@ -85,15 +87,9 @@ public class SocketChannelEventHandler implements NioEventHandler {
     protected final ListenableFutureTask<NioSocketChannel> connectableFuture;
 
     public SocketChannelEventHandler(NioEventLoop eventLoop,
-                                     SocketChannel channel,
-                                     SelectionKey key,
-                                     LightyConfiguration lightyConfiguration) {
-        this(eventLoop, channel, key, lightyConfiguration, new ListenableFutureTask<>(null));
-    }
-
-    public SocketChannelEventHandler(NioEventLoop eventLoop,
                                      SocketChannel javaChannel,
                                      SelectionKey key,
+                                     ChannelInitializer<InitializingNioSocketChannel> channelInitializer,
                                      LightyConfiguration configuration,
                                      ListenableFutureTask<NioSocketChannel> connectableFuture
     ) {
@@ -101,6 +97,12 @@ public class SocketChannelEventHandler implements NioEventHandler {
         this.javaChannel = javaChannel;
         this.key = key;
         this.connectableFuture = connectableFuture;
+
+        connectableFuture.addListener(new SuccessFutureListener<>((c) -> {
+            inputClosed = false;
+            outputClosed = false;
+        }));
+
         channel = new NioSocketChannelImpl();
         context = buildContext();
         lettyConf = configuration.lettyProperties();
@@ -108,8 +110,7 @@ public class SocketChannelEventHandler implements NioEventHandler {
 
         var channelConfiguration = new InitializingNioSocketChannel(javaChannel, eventLoop);
 
-        configuration.channelInitializer()
-                .initChannel(channelConfiguration);
+        channelInitializer.initChannel(channelConfiguration);
 
         //determine executor
         EventExecutorGroup<?> handlerExecutorGroup = channelConfiguration.executorGroup();
@@ -135,27 +136,8 @@ public class SocketChannelEventHandler implements NioEventHandler {
                     }
                 }
         );
-    }
 
-    @SneakyThrows
-    public ListenableFutureTask<NioSocketChannel> connect(SocketAddress address) {
-        if (eventLoop.inEventLoop()) {
-            connect0(address);
-        } else {
-            eventLoop.submit(() -> connect0(address));
-        }
-        return connectableFuture;
-    }
-
-    @SneakyThrows
-    private void connect0(SocketAddress address) {
-        try {
-            javaChannel.connect(address);
-        } catch (Throwable t) {
-            connectableFuture.setFailure(t);
-            close();
-            throw t;
-        }
+        dispatcher.onInitialize();
     }
 
     @Override
@@ -165,22 +147,11 @@ public class SocketChannelEventHandler implements NioEventHandler {
         } else if (key.isWritable()) {
             processWritableEvent();
         } else if (key.isConnectable()) {
-            processConnectableEvent();
+            processEvent(key);
         }
     }
 
-    private void processConnectableEvent() throws IOException {
-        try {
-            javaChannel.finishConnect();
-        } catch (IOException e) {
-            connectableFuture.setFailure(e);
-            close0();
-            return;
-        }
-        connectableFuture.setSuccess(channel);
-        dispatcher.onConnected();
-        key.interestOps((key.interestOps() ^ SelectionKey.OP_CONNECT) | SelectionKey.OP_READ);
-    }
+    public abstract void processEvent(SelectionKey key);
 
     private void processReadableEvent() throws IOException {
         int n;
@@ -216,7 +187,13 @@ public class SocketChannelEventHandler implements NioEventHandler {
                 }
             } else {
                 //如果还有剩余，意味 socket 发送缓冲着已经满了，只能等待下一次 Writable 事件
-                log.debug("Underlying socket sending buffer is full, wait next time writable event.");
+                log.debug("Underlying socket sending buffer is full, wait for the next time writable event.");
+                return;
+            }
+
+            //每次写完一个数据,都会触发 future, 用户代码有可能会执行 close/shutdownOutput, 所以这里需要检查  [issue 0x01]
+            if (outputClosed) {
+                log.debug("Output closed");
                 return;
             }
         }
@@ -239,31 +216,31 @@ public class SocketChannelEventHandler implements NioEventHandler {
             return writeFuture;
         }
 
-        WriteStrategy rBuf;
+        WriteStrategy writer;
         if (data instanceof RingBuffer) {
-            rBuf = new RingBufferWriteStrategy((RingBuffer) data);
+            writer = new RingBufferWriteStrategy((RingBuffer) data);
         } else if (data instanceof ByteBuffer bBuf) {
-            rBuf = new ByteBufferWriteStrategy(bBuf);
+            writer = new ByteBufferWriteStrategy(bBuf);
         } else if (data.getClass().equals(byte[].class)) {
             byte[] bBuf = (byte[]) data;
-            rBuf = new ByteBufferWriteStrategy(bBuf);
+            writer = new ByteBufferWriteStrategy(bBuf);
         } else if (data instanceof FileChannel fc) {
-            rBuf = new FileChannelWriteStrategy(fc);
+            writer = new FileChannelWriteStrategy(fc);
         } else {
             writeFuture.setFailure(new LightyException("Unsupported data type to write:" + data.getClass()));
             return writeFuture;
         }
 
         if (outputBuffer.isEmpty()) {
-            rBuf.write(javaChannel);
+            writer.write(javaChannel);
         }
-        if (rBuf.remaining() > 0) {
-            outputBuffer.offer(new WriterFuturePair(rBuf, writeFuture));
+        if (writer.remaining() > 0) {
+            outputBuffer.offer(new WriterFuturePair(writer, writeFuture));
             key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         } else {
-            if (rBuf.getSource() instanceof RecyclableBuffer recyclable) {
+            writeFuture.setSuccess();
+            if (writer.getSource() instanceof RecyclableBuffer recyclable) {
                 recyclable.release();
-                log.debug("Recycle buffer {}", recyclable);
             }
         }
         return writeFuture;
@@ -278,7 +255,8 @@ public class SocketChannelEventHandler implements NioEventHandler {
         dispatcher.onReadCompleted();
 
         if (outputClosed) {
-            onFinalized();
+            dispatcher.onClosed();
+            destroy();
         } else if (!lettyConf.isAllowHalfClosure()) {
             shutdownOutput();
         }
@@ -303,20 +281,41 @@ public class SocketChannelEventHandler implements NioEventHandler {
      */
     @SneakyThrows
     private void shutdownOutput() {
-        //幂等
         if (outputClosed)
             return;
         outputClosed = true;
         //清除输出缓冲
         outputBuffer.invalid();
-        //移除监听
+        //移除写监听
         key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
         //关闭底层 socket 的输出
         javaChannel.shutdownOutput();
         log.debug("Send FIN to {}", javaChannel.getRemoteAddress());
 
         if (inputClosed) {
-            onFinalized();
+            dispatcher.onClosed();
+            destroy();
+        }
+    }
+
+    /**
+     * 如果处于活跃状态, 则先 close 再 destroy
+     * 否则, 直接 destroy
+     */
+    public ListenableFutureTask<Void> shutdown() {
+        if (eventLoop.inEventLoop()) {
+            shutdown0();
+            return ListenableFutureTask.successFuture();
+        } else {
+            return eventLoop.submit(this::shutdown0);
+        }
+    }
+
+    private void shutdown0() {
+        if (isClosed()) {
+            destroy();
+        } else {
+            close();
         }
     }
 
@@ -329,13 +328,8 @@ public class SocketChannelEventHandler implements NioEventHandler {
      * <p>
      * Be aware that must be executed in curren event loop, cuz there is no any synchronization!
      */
-    public ListenableFutureTask<Void> close() {
-        eventLoop.execute(this::close0);
-        return dispatcher.closedFuture();
-    }
-
-    private void close0() {
-        if (outputClosed && inputClosed) {
+    protected void close() {
+        if (isClosed()) {
             return;
         }
         //close 的时候有可能已经调用了 shutdownOutput , 也可能没有
@@ -344,20 +338,27 @@ public class SocketChannelEventHandler implements NioEventHandler {
             outputBuffer.invalid();
         }
         outputClosed = inputClosed = true;
+        log.debug("Channel closed: {}", javaChannel.toString());
 
-        onFinalized();
+        dispatcher.onClosed();
+        destroy();
     }
 
     @SneakyThrows
-    private void onFinalized() {
-        String name = javaChannel.toString();
+    protected void destroy() {
+        if (destroyed) {
+            return;
+        }
+        destroyed = true;
 
         javaChannel.close();
         key.cancel();
 
-        log.debug("Release resource associated with channel {}", name);
+        dispatcher.onDestroy();
+    }
 
-        dispatcher.onClosed();
+    private boolean isClosed() {
+        return outputClosed && inputClosed;
     }
 
     class NioSocketChannelImpl extends AbstractNioSocketChannel {
@@ -381,19 +382,26 @@ public class SocketChannelEventHandler implements NioEventHandler {
         @Nonnull
         @Override
         public ListenableFutureTask<Void> shutdownInput() {
-            return eventLoop.submit(SocketChannelEventHandler.this::shutdownInput);
+            eventLoop.execute(SocketChannelEventHandler.this::shutdownInput);
+            return SocketChannelEventHandler.this.dispatcher.readCompletedFuture();
         }
 
         @Nonnull
         @Override
         public ListenableFutureTask<Void> shutdownOutput() {
             return eventLoop.submit(SocketChannelEventHandler.this::shutdownOutput);
+
         }
 
         @Nonnull
         @Override
         public ListenableFutureTask<Void> close() {
-            eventLoop.execute(SocketChannelEventHandler.this::close0);
+            //[issue 0x01]
+            //由于这个 close 操作是对外的, 用户代码随时可能调用, 如果调用后立即在当前事件循环 close 的话
+            //可能会影响后面还需使用资源的逻辑
+            //比如, processWritableEvent 中, 会遍历所有的待写数据, 每写完一个都会执行用户代码(future)
+            //如果用户代码调用 close 在当前事件循环就执行, 就会导致遍历到下一个数据时使用一个已关闭的 channel、key
+            eventLoop.execute(SocketChannelEventHandler.this::close);
             return closeFuture();
         }
 
@@ -452,10 +460,11 @@ public class SocketChannelEventHandler implements NioEventHandler {
         }
 
         public void invalid() {
-            log.debug("Clear outbound buffer ,remaining: {} bytes", size);
             for (WriterFuturePair bufFuture; (bufFuture = outputBuffer.poll()) != null; ) {
                 bufFuture.future.setFailure(new LightyException("Output Buffer cleared"));
             }
+            if (size > 0)
+                log.debug("Invalid output buffer: {} bytes", size);
         }
     }
 
