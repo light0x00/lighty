@@ -50,7 +50,7 @@ public class ZeroCopyClientSide {
 
         if (connect.isSuccess()) {
             NioSocketChannel channel = connect.get();
-            channel.closeFuture().sync();
+            channel.closedFuture().sync();
         } else {
             connect.cause().printStackTrace();
         }

@@ -1,5 +1,7 @@
 package io.github.light0x00.lighty.core.eventloop;
 
+import io.github.light0x00.lighty.core.dispatcher.NioEventHandler;
+
 import java.nio.channels.SelectionKey;
 
 /**

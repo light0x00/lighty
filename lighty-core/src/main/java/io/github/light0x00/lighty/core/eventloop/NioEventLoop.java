@@ -2,6 +2,7 @@ package io.github.light0x00.lighty.core.eventloop;
 
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.concurrent.RejectedExecutionHandler;
+import io.github.light0x00.lighty.core.dispatcher.NioEventHandler;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -127,6 +128,7 @@ public class NioEventLoop implements EventExecutor {
         try {
             T eventHandler = Objects.requireNonNull(eventHandlerProvider.get(key));
             key.attach(eventHandler);
+            log.debug("Register channel({}) on selector with interest {}", channel, interestOps);
             return eventHandler;
         } catch (Throwable th) {
             //必须确保 Selector 中每一个注册的 SelectionKey 的 attachment 都为 EventHandler

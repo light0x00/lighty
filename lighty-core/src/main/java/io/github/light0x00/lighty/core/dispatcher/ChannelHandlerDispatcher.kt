@@ -153,21 +153,13 @@ class ChannelHandlerDispatcher(
         }
     }
 
-    fun input(buf: RecyclableBuffer?) {
-        if (eventExecutor.inEventLoop()) {
-            inboundChain.invoke(buf)
-        } else {
-            eventExecutor.execute { inboundChain.invoke(buf) }
-        }
+    fun input(buf: RecyclableBuffer) {
+        inboundChain.invoke(buf)
     }
 
-    fun output(data: Any): ListenableFutureTask<Void> {
+    fun output(data: Any, flush: Boolean): ListenableFutureTask<Void> {
         val writeFuture = ListenableFutureTask<Void>(null)
-        if (eventExecutor.inEventLoop()) {
-            outboundChain.invoke(data, writeFuture)
-        } else {
-            eventExecutor.execute { outboundChain.invoke(data, writeFuture) }
-        }
+        outboundChain.invoke(data, writeFuture, flush)
         return writeFuture
     }
 
@@ -201,19 +193,19 @@ class ChannelHandlerDispatcher(
         val context: ChannelContext,
         val next: OutboundPipelineInvocation
     ) : OutboundPipelineInvocation {
-        override fun invoke(dataIn: Any, future: ListenableFutureTask<Void>) {
+        override fun invoke(dataIn: Any, future: ListenableFutureTask<Void>, flush: Boolean) {
             if (executor.inEventLoop()) {
-                invoke0(dataIn, future)
+                invoke0(dataIn, future, flush)
             } else {
-                executor.execute { invoke0(dataIn, future) }
+                executor.execute { invoke0(dataIn, future, flush) }
             }
         }
 
-        private fun invoke0(dataIn: Any, future: ListenableFutureTask<Void>) {
+        private fun invoke0(dataIn: Any, future: ListenableFutureTask<Void>, flush: Boolean) {
             try {
                 handler.onWrite(context.nextContext(next), dataIn)
                 { dataOut: Any ->
-                    next.invoke(dataOut, future)
+                    next.invoke(dataOut, future, flush)
                     future
                 }
             } catch (th: Throwable) {

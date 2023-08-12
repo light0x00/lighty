@@ -30,15 +30,16 @@ public class Utf32Server {
                 .initializer(new ChannelInitializer<>() {
                     @Override
                     public void initChannel(@Nonnull NioServerSocketChannel channel) {
-                        channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+                        channel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
                     }
                 })
                 .childInitializer(new ChannelInitializer<>() {
                     @Override
                     public void initChannel(InitializingNioSocketChannel channel) {
                         channel.pipeline().add(new UTF32Decoder());
-                        channel.pipeline().add(handlerExecutorGroup, new ServerMessageHandler());
-                        channel.pipeline().add(handlerExecutorGroup, new UTF32Encoder());
+                        channel.pipeline().add(
+                                handlerExecutorGroup,
+                                new ServerMessageHandler(),new UTF32Encoder());
                     }
                 })
                 .bind(new InetSocketAddress(9000));

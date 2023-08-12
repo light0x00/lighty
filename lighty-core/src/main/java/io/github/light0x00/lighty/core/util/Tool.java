@@ -38,11 +38,6 @@ public class Tool {
     }
 
     @SneakyThrows
-    public static boolean methodExistAnnotation(Class<? extends Annotation> annotationClass, Class<?> clazz, String methodName, Class<?>... parameterTypes) {
-        return clazz.getMethod(methodName, parameterTypes).isAnnotationPresent(annotationClass);
-    }
-
-    @SneakyThrows
     public static Method getMethod(Object obj, String methodName, Class<?>... parameterTypes) {
         return obj.getClass().getMethod(methodName, parameterTypes);
     }

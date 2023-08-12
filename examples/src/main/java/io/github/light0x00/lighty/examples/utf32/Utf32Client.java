@@ -38,14 +38,8 @@ public class Utf32Client {
         connectFuture.sync();
         NioSocketChannel channel = connectFuture.get();
 
-        channel.closeFuture().sync();
+        channel.closedFuture().sync();
         eventLoopGroup.shutdown();
-
-//        new SocketChannelEventHandler(null,null,null,null,null){
-//            {
-//                this.connectableFuture.setSuccess();
-//            }
-//        };
     }
 
 }

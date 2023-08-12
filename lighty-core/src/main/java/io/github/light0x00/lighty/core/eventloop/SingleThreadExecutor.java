@@ -213,37 +213,35 @@ public class SingleThreadExecutor implements EventExecutor {
 
     private void startWorker() {
         if (state == INITIAL && compareAndSetState(INITIAL, READY)) {
-            doStartWorker();
+            executor.execute(this::run);
         }
     }
 
-    private void doStartWorker() {
-        executor.execute(() -> {
-            workerThread = Thread.currentThread();
-            compareAndSetState(READY, RUNNING);
+    private void run(){
+        workerThread = Thread.currentThread();
+        compareAndSetState(READY, RUNNING);
 
-            log.debug("Worker started");
+        log.debug("Event executor started");
 
-            while (shouldWork()) {
-                try {
-                    Runnable task = queue.take();
-                    task.run();
-                } catch (InterruptedException e) {
-                    /*
-                     * 有两种可能导致 worker 线程被中断,
-                     * 1. 用户代码直接调用了被当前实例包装的 executor 的 shutdown/shutdownNow 方法
-                     * 2. 用户代码调用了当前实例的 shutdown/shutdownNow 方法
-                     *
-                     * 对于第一种, 这里忽略掉, 因此其不会影响 worker 的运行. 虽然“用户的感受是线程池关不掉”, 但这是其没有遵守协定导致.
-                     * 第二种情况是预期的关闭线程池的正确操作.
-                     */
-                } catch (RuntimeException e) {
-                    log.error("", e);
-                }
+        while (shouldWork()) {
+            try {
+                Runnable task = queue.take();
+                task.run();
+            } catch (InterruptedException e) {
+                /*
+                 * 有两种可能导致 worker 线程被中断,
+                 * 1. 用户代码直接调用了被当前实例包装的 executor 的 shutdown/shutdownNow 方法
+                 * 2. 用户代码调用了当前实例的 shutdown/shutdownNow 方法
+                 *
+                 * 对于第一种, 这里忽略掉, 因此其不会影响 worker 的运行. 虽然“用户的感受是线程池关不掉”, 但这是其没有遵守协定导致.
+                 * 第二种情况是预期的关闭线程池的正确操作.
+                 */
+            } catch (RuntimeException e) {
+                log.error("", e);
             }
-            onCompleted();
-            log.debug("Worker stopped");
-        });
+        }
+        onCompleted();
+        log.debug("Worker stopped");
     }
 
     private void onCompleted() {

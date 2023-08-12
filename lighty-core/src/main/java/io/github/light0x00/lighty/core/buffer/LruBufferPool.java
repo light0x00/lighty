@@ -44,7 +44,6 @@ public class LruBufferPool extends BufferPool {
     private final Object poolLock = new Object();
     private final Object lruLock = new Object();
 
-
     /**
      * @param maxBytes The maximum bytes of the ByteBuffers in buffer pool.
      *                 It will determine the threshold of the eviction.

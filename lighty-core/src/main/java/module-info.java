@@ -2,6 +2,7 @@
  * @author light0x00
  * @since 2023/8/9
  */
+@SuppressWarnings("all")
 module io.github.light0x00.lighty.core {
     requires kotlin.stdlib;
     requires static jsr305;

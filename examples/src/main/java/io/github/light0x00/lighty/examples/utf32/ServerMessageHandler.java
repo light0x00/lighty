@@ -19,8 +19,8 @@ class ServerMessageHandler extends DuplexChannelHandlerAdapter {
 
     @Override
     public void onConnected(ChannelContext context) {
-        log.info("onConnected");
-        context.channel().write("hello world")
+        log.info("Connection established");
+        context.channel().writeAndFlush("hello world")
                 .addListener(
                         (f) -> log.info("write result:{}", f.isSuccess())
                 );
@@ -28,7 +28,7 @@ class ServerMessageHandler extends DuplexChannelHandlerAdapter {
 
     @Override
     public void onRead(ChannelContext context, Object data, InboundPipeline next) {
-        log.info("onRead: {}", data);
+        log.info("Message received: {}", data);
         context.channel().close();
     }
 

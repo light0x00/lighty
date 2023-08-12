@@ -62,10 +62,18 @@ interface ChannelContext {
                 return object : NioSocketChannel by this@ChannelContext.channel() {
                     /**
                      * 重写 write 方法, 使之将数据传给后续 handler, 而不是回到第一个, 造成死循环
+                     *
+                     * 调用 context.write 视为一次全新的写, 所以这里不沿用原 future; 这是与 OutboundPipeline#next 的区别
                      */
                     override fun write(data: Any): ListenableFutureTask<Void> {
                         val future = ListenableFutureTask<Void>(null) //调用 context.write 视为一次全新的写, 所以这里不沿用原 future
-                        outboundPipeline.invoke(data, future);
+                        outboundPipeline.invoke(data, future, false);
+                        return future
+                    }
+
+                    override fun writeAndFlush(data: Any): ListenableFutureTask<Void> {
+                        val future = ListenableFutureTask<Void>(null)
+                        outboundPipeline.invoke(data, future, true);
                         return future
                     }
                 }

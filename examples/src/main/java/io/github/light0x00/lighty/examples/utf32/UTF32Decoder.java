@@ -15,20 +15,23 @@ public class UTF32Decoder extends ByteToMessageDecoder {
 
     StringBuilder line = new StringBuilder();
 
+    static final int MESSAGE_DELIMITER = '\n';
+
     public UTF32Decoder() {
         super(4);
     }
 
     @Override
     protected void decode(ChannelContext context, RingBuffer data, InboundPipeline next) {
-        log.info("decode..");
         while (data.remainingCanGet() >= 4) {
             int cp = data.getInt();
-            if (cp == '\n') {
+            if (cp == MESSAGE_DELIMITER) {
+                log.info("Decode a complete message");
                 next.invoke(line.toString());
                 line.setLength(0);
             } else {
                 line.append(Character.toString(cp));
+                log.info("Accumulate {} bytes", 4);
             }
         }
     }

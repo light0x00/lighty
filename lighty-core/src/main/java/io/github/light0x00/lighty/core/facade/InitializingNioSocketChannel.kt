@@ -23,6 +23,9 @@ class InitializingNioSocketChannel(javaChannel: SocketChannel, var eventExecutor
 
     private val handlerExecutorPairs: MutableList<ChannelHandlerExecutorPair<ChannelHandler>> = LinkedList();
 
+    /**
+     * The [EventExecutorGroup] for executing handlers.
+     */
     @set:JvmName("executorGroup")
     var executorGroup: EventExecutorGroup<*>? = null
         set(value) {
@@ -43,31 +46,39 @@ class InitializingNioSocketChannel(javaChannel: SocketChannel, var eventExecutor
     }
 
     override fun handlerExecutorPair(): MutableList<ChannelHandlerExecutorPair<ChannelHandler>> {
-        return handlerExecutorPairs;
+        return handlerExecutorPairs
     }
 
     override fun write(data: Any): ListenableFutureTask<Void> {
-        throw LightyException("operation not supported!");
+        throw LightyException("Unsupported operation!")
+    }
+
+    override fun flush() {
+        throw LightyException("Unsupported operation!")
+    }
+
+    override fun writeAndFlush(data: Any): ListenableFutureTask<Void> {
+        throw LightyException("Unsupported operation!")
     }
 
     override fun close(): ListenableFutureTask<Void> {
-        throw LightyException("operation not supported!");
+        throw LightyException("Unsupported operation!")
     }
 
     override fun connectedFuture(): ListenableFutureTask<Void> {
-        throw LightyException("operation not supported!");
+        throw LightyException("Unsupported operation!")
     }
 
-    override fun closeFuture(): ListenableFutureTask<Void> {
-        throw LightyException("operation not supported!");
+    override fun closedFuture(): ListenableFutureTask<Void> {
+        throw LightyException("Unsupported operation!")
     }
 
     override fun shutdownOutput(): ListenableFutureTask<Void> {
-        throw LightyException("operation not supported!");
+        throw LightyException("Unsupported operation!")
     }
 
     override fun shutdownInput(): ListenableFutureTask<Void> {
-        throw LightyException("operation not supported!");
+        throw LightyException("Unsupported operation!")
     }
 
     inner class ChannelPipeline {

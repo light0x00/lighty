@@ -31,8 +31,8 @@ public abstract class AbstractEventExecutorGroup<T extends EventExecutor> implem
     }
 
     @SneakyThrows
+    @SuppressWarnings("unchecked")
     public AbstractEventExecutorGroup(int threadNum, Executor executor) {
-        //noinspection unchecked
         eventLoops = (T[]) new EventExecutor[2];
 
         for (int i = 0; i < threadNum; i++) {

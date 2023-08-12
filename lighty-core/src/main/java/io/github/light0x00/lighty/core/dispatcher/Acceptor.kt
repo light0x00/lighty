@@ -1,7 +1,6 @@
 package io.github.light0x00.lighty.core.dispatcher
 
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
-import io.github.light0x00.lighty.core.eventloop.NioEventHandler
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup
 import io.github.light0x00.lighty.core.facade.*

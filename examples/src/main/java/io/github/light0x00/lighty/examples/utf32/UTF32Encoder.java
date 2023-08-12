@@ -13,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class UTF32Encoder extends OutboundChannelHandlerAdapter {
 
-    static final int MESSAGE_DELIMITER = "\n".codePointAt(0);
+    static final int MESSAGE_DELIMITER = '\n';
 
     @Override
     public void onWrite(ChannelContext context, Object msg, OutboundPipeline next) {

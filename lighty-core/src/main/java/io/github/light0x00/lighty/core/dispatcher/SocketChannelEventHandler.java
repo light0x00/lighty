@@ -5,27 +5,28 @@ import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.concurrent.SuccessFutureListener;
+import io.github.light0x00.lighty.core.dispatcher.writestrategy.ByteBufferWriteStrategy;
+import io.github.light0x00.lighty.core.dispatcher.writestrategy.FileChannelWriteStrategy;
+import io.github.light0x00.lighty.core.dispatcher.writestrategy.RingBufferWriteStrategy;
+import io.github.light0x00.lighty.core.dispatcher.writestrategy.WriteStrategy;
 import io.github.light0x00.lighty.core.eventloop.EventExecutor;
 import io.github.light0x00.lighty.core.eventloop.EventExecutorGroup;
-import io.github.light0x00.lighty.core.eventloop.NioEventHandler;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop;
 import io.github.light0x00.lighty.core.facade.*;
 import io.github.light0x00.lighty.core.handler.ChannelContext;
 import io.github.light0x00.lighty.core.handler.DuplexChannelHandler;
-import lombok.AllArgsConstructor;
+import io.github.light0x00.lighty.core.util.EventLoopConfinement;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * 基于责任链和观察者模式分发底层事件
@@ -36,6 +37,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * @since 2023/6/29
  */
 @Slf4j
+@EventLoopConfinement
 public abstract class SocketChannelEventHandler implements NioEventHandler {
 
     protected final NioEventLoop eventLoop;
@@ -86,6 +88,8 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
     @Getter
     protected final ListenableFutureTask<NioSocketChannel> connectableFuture;
 
+    protected int flushThreshold;
+
     public SocketChannelEventHandler(NioEventLoop eventLoop,
                                      SocketChannel javaChannel,
                                      SelectionKey key,
@@ -101,6 +105,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
         connectableFuture.addListener(new SuccessFutureListener<>((c) -> {
             inputClosed = false;
             outputClosed = false;
+            flushThreshold = c.getOption(StandardSocketOptions.SO_SNDBUF);
         }));
 
         channel = new NioSocketChannelImpl();
@@ -128,11 +133,11 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
                 (data) -> {
                     log.warn("Discarded inbound message {} that reached at the tail of the pipeline. Please check your pipeline configuration.", data);
                 },
-                (data, future) -> {
+                (data, future, flush) -> {
                     if (eventLoop.inEventLoop()) {
-                        write(data, future);
+                        write(data, future, flush);
                     } else {
-                        eventLoop.execute(() -> write(data, future));
+                        eventLoop.execute(() -> write(data, future, flush));
                     }
                 }
         );
@@ -168,9 +173,9 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
     }
 
     private void processWritableEvent() throws IOException {
-        for (WriterFuturePair bufFuture; (bufFuture = outputBuffer.peek()) != null; ) {
+        for (WriterFuturePair pair; (pair = outputBuffer.peek()) != null; ) {
 
-            WriteStrategy writer = bufFuture.writer();
+            WriteStrategy writer = pair.writer();
             /*
              * Some types of channels, depending upon their state,
              * may write only some of the bytes or possibly none at all.
@@ -180,7 +185,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             writer.write(javaChannel);
             if (writer.remaining() == 0) {
                 outputBuffer.poll();
-                bufFuture.future.setSuccess();
+                pair.future().setSuccess();
                 if (writer.getSource() instanceof RecyclableBuffer recyclable) {
                     recyclable.release();
                     log.debug("Recycle buffer {}", recyclable);
@@ -208,11 +213,13 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
      *
      * <p>
      * Be aware that must be executed in curren event loop, cuz there is no any synchronization!
+     *
+     * @implNote must be executed in current handler's event loop
      */
     @SneakyThrows
-    private ListenableFutureTask<Void> write(Object data, ListenableFutureTask<Void> writeFuture) {
+    private ListenableFutureTask<Void> write(Object data, ListenableFutureTask<Void> writeFuture, boolean flush) {
         if (outputClosed) {
-            writeFuture.setFailure(new LightyException("Channel output has been shut down"));
+            writeFuture.setFailure(new LightyException("Channel output closed"));
             return writeFuture;
         }
 
@@ -231,6 +238,11 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             return writeFuture;
         }
 
+        if (!flush && outputBuffer.size() < flushThreshold) {
+            outputBuffer.offer(new WriterFuturePair(writer, writeFuture));
+            return writeFuture;
+        }
+
         if (outputBuffer.isEmpty()) {
             writer.write(javaChannel);
         }
@@ -244,6 +256,15 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             }
         }
         return writeFuture;
+    }
+
+    /**
+     * @implNote must be executed in current handler's event loop
+     */
+    private void flush() {
+        if (outputBuffer.size() > 0) {
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+        }
     }
 
     private void readCompleted() {
@@ -274,7 +295,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
      *
      * <li>{@link #close()} , may concurrently change the share mutable state {@link #outputClosed}
      * <li>{@link #processWritableEvent()} , cannot concurrently execute, may cause a {@link java.nio.channels.CancelledKeyException}
-     * <li>{@link #write(Object, ListenableFutureTask)} , if then act race condition on the mutable state {@link #outputClosed}
+     * <li>{@link #write(Object, ListenableFutureTask, boolean)} , if then act race condition on the mutable state {@link #outputClosed}
      *
      * <p>
      * Be aware that must be executed in curren event loop, cuz there is no any synchronization!
@@ -375,7 +396,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
 
         @Nonnull
         @Override
-        public ListenableFutureTask<Void> closeFuture() {
+        public ListenableFutureTask<Void> closedFuture() {
             return SocketChannelEventHandler.this.dispatcher.closedFuture();
         }
 
@@ -402,13 +423,24 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             //比如, processWritableEvent 中, 会遍历所有的待写数据, 每写完一个都会执行用户代码(future)
             //如果用户代码调用 close 在当前事件循环就执行, 就会导致遍历到下一个数据时使用一个已关闭的 channel、key
             eventLoop.execute(SocketChannelEventHandler.this::close);
-            return closeFuture();
+            return closedFuture();
         }
 
         @Nonnull
         @Override
         public ListenableFutureTask<Void> write(@Nonnull Object data) {
-            return dispatcher.output(data);
+            return dispatcher.output(data, false);
+        }
+
+        @Nonnull
+        @Override
+        public ListenableFutureTask<Void> writeAndFlush(@Nonnull Object data) {
+            return dispatcher.output(data, true);
+        }
+
+        @Override
+        public void flush() {
+            eventLoop.execute(SocketChannelEventHandler.this::flush);
         }
     }
 
@@ -428,129 +460,6 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
                 return bufferPool.take(capacity);
             }
         };
-    }
-
-    private record WriterFuturePair(WriteStrategy writer, ListenableFutureTask<Void> future) {
-
-    }
-
-    public static class OutputBuffer {
-        private final Queue<WriterFuturePair> outputBuffer = new ConcurrentLinkedDeque<>();
-
-        private int size;
-
-        public void offer(WriterFuturePair wf) {
-            outputBuffer.offer(wf);
-            size += wf.writer.remaining();
-        }
-
-        public WriterFuturePair poll() {
-            var bf = outputBuffer.poll();
-            if (bf != null)
-                size -= bf.writer.remaining();
-            return bf;
-        }
-
-        public WriterFuturePair peek() {
-            return outputBuffer.peek();
-        }
-
-        public boolean isEmpty() {
-            return outputBuffer.isEmpty();
-        }
-
-        public void invalid() {
-            for (WriterFuturePair bufFuture; (bufFuture = outputBuffer.poll()) != null; ) {
-                bufFuture.future.setFailure(new LightyException("Output Buffer cleared"));
-            }
-            if (size > 0)
-                log.debug("Invalid output buffer: {} bytes", size);
-        }
-    }
-
-    public interface WriteStrategy {
-        long write(GatheringByteChannel channel) throws IOException;
-
-        long remaining();
-
-        Object getSource();
-    }
-
-    @AllArgsConstructor
-    static class RingBufferWriteStrategy implements WriteStrategy {
-
-        private RingBuffer ringBuffer;
-
-        @Override
-        public long write(GatheringByteChannel channel) throws IOException {
-            return ringBuffer.writeToChannel(channel);
-        }
-
-        @Override
-        public long remaining() {
-            return ringBuffer.remainingCanGet();
-        }
-
-        @Override
-        public Object getSource() {
-            return ringBuffer;
-        }
-    }
-
-    @AllArgsConstructor
-    static class FileChannelWriteStrategy implements WriteStrategy {
-        private FileChannel fileChannel;
-        private long position;
-
-        public FileChannelWriteStrategy(FileChannel fileChannel) {
-            this.fileChannel = fileChannel;
-        }
-
-        @Override
-        public long write(GatheringByteChannel channel) throws IOException {
-            long written = fileChannel.transferTo(position, fileChannel.size() - position, channel);
-            position += written;
-            return written;
-        }
-
-        @SneakyThrows
-        @Override
-        public long remaining() {
-            return fileChannel.size() - position;
-        }
-
-        @Override
-        public Object getSource() {
-            return fileChannel;
-        }
-    }
-
-    static class ByteBufferWriteStrategy implements WriteStrategy {
-
-        private final ByteBuffer buffer;
-
-        public ByteBufferWriteStrategy(byte[] arr) {
-            this.buffer = ByteBuffer.wrap(arr);
-        }
-
-        public ByteBufferWriteStrategy(ByteBuffer buffer) {
-            this.buffer = buffer;
-        }
-
-        @Override
-        public long write(GatheringByteChannel channel) throws IOException {
-            return channel.write(buffer);
-        }
-
-        @Override
-        public long remaining() {
-            return buffer.remaining();
-        }
-
-        @Override
-        public Object getSource() {
-            return buffer;
-        }
     }
 
 }
