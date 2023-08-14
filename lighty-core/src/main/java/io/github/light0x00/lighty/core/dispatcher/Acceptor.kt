@@ -56,7 +56,8 @@ class Acceptor(
                     incomingChannel,
                     selectionKey,
                     childInitializer,
-                    lightyConfiguration,
+                    lightyConfiguration.lettyProperties(),
+                    lightyConfiguration.bufferPool().get(),
                     connectableFuture
                 )
             }

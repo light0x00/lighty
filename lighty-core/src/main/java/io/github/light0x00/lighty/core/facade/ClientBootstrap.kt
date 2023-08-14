@@ -57,7 +57,8 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
                         channel,
                         key,
                         initializer,
-                        configuration,
+                        configuration.lettyProperties(),
+                        configuration.bufferPool().get(),
                         connectableFuture
                     )
                 }.addListener(FutureListener() {

@@ -5,6 +5,7 @@ import io.github.light0x00.lighty.core.util.EventLoopConfinement;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 @EventLoopConfinement
 @Slf4j
 public class OutputBuffer {
-    private final Queue<WriterFuturePair> outputBuffer = new ConcurrentLinkedDeque<>();
+    private final Queue<WriterFuturePair> outputBuffer = new LinkedList<>();
 
     @Getter
     private int size;

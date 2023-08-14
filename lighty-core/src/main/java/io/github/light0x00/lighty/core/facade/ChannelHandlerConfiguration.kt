@@ -5,7 +5,5 @@ import io.github.light0x00.lighty.core.handler.ChannelHandler
 import io.github.light0x00.lighty.core.handler.ChannelHandlerExecutorPair
 
 interface ChannelHandlerConfiguration {
-    fun executorGroup(): EventExecutorGroup<*>?
-
     fun handlerExecutorPair(): List<ChannelHandlerExecutorPair<ChannelHandler>>
 }

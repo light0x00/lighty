@@ -1,11 +1,9 @@
 package io.github.light0x00.lighty.core.dispatcher;
 
+import io.github.light0x00.lighty.core.buffer.BufferPool;
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop;
-import io.github.light0x00.lighty.core.facade.ChannelInitializer;
-import io.github.light0x00.lighty.core.facade.InitializingNioSocketChannel;
-import io.github.light0x00.lighty.core.facade.LightyConfiguration;
-import io.github.light0x00.lighty.core.facade.NioSocketChannel;
+import io.github.light0x00.lighty.core.facade.*;
 import lombok.SneakyThrows;
 
 import java.io.IOException;
@@ -19,8 +17,8 @@ import java.nio.channels.SocketChannel;
  */
 public class SocketChannelEventHandlerC extends SocketChannelEventHandler {
 
-    public SocketChannelEventHandlerC(NioEventLoop eventLoop, SocketChannel javaChannel, SelectionKey key, ChannelInitializer<InitializingNioSocketChannel> channelInitializer, LightyConfiguration configuration, ListenableFutureTask<NioSocketChannel> connectableFuture) {
-        super(eventLoop, javaChannel, key, channelInitializer, configuration, connectableFuture);
+    public SocketChannelEventHandlerC(NioEventLoop eventLoop, SocketChannel javaChannel, SelectionKey key, ChannelInitializer<InitializingNioSocketChannel> channelInitializer, LightyProperties lettyProperties, BufferPool bufferPool, ListenableFutureTask<NioSocketChannel> connectableFuture) {
+        super(eventLoop, javaChannel, key, channelInitializer, lettyProperties, bufferPool, connectableFuture);
     }
 
     @Override

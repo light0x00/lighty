@@ -17,7 +17,7 @@ import java.util.*
  * @author light0x00
  * @since 2023/8/5
  */
-class InitializingNioSocketChannel(javaChannel: SocketChannel, var eventExecutor: EventExecutor) :
+class InitializingNioSocketChannel(javaChannel: SocketChannel, private var eventExecutor: EventExecutor) :
     ChannelHandlerConfiguration,
     AbstractNioSocketChannel(javaChannel) {
 
@@ -39,10 +39,6 @@ class InitializingNioSocketChannel(javaChannel: SocketChannel, var eventExecutor
 
     fun pipeline(): ChannelPipeline {
         return pipeline
-    }
-
-    override fun executorGroup(): EventExecutorGroup<*>? {
-        return executorGroup
     }
 
     override fun handlerExecutorPair(): MutableList<ChannelHandlerExecutorPair<ChannelHandler>> {

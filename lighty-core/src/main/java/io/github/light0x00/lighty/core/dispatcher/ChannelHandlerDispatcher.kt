@@ -17,7 +17,6 @@ import java.util.*
  */
 @Slf4j
 class ChannelHandlerDispatcher(
-    private var eventExecutor: EventExecutor,
     val context: ChannelContext,
     handlerExecutorPairs: List<ChannelHandlerExecutorPair<ChannelHandler>>,
     inboundReceiver: InboundPipelineInvocation,

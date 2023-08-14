@@ -48,7 +48,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
 
     protected final BufferPool bufferPool;
 
-    protected final LightyProperties lettyConf;
+    protected final LightyProperties lettyProperties;
 
     protected final SocketChannel javaChannel;
 
@@ -75,11 +75,6 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
 
     private boolean destroyed = false;
 
-    /**
-     * 用于执行责任链和观察者
-     */
-    protected final EventExecutor handlerExecutor;
-
     protected final ChannelHandlerDispatcher dispatcher;
 
     /**
@@ -94,7 +89,8 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
                                      SocketChannel javaChannel,
                                      SelectionKey key,
                                      ChannelInitializer<InitializingNioSocketChannel> channelInitializer,
-                                     LightyConfiguration configuration,
+                                     LightyProperties lettyProperties,
+                                     BufferPool bufferPool,
                                      ListenableFutureTask<NioSocketChannel> connectableFuture
     ) {
         this.eventLoop = eventLoop;
@@ -110,24 +106,14 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
 
         channel = new NioSocketChannelImpl();
         context = buildContext();
-        lettyConf = configuration.lettyProperties();
-        bufferPool = configuration.bufferPool();
+        this.lettyProperties = lettyProperties;
+        this.bufferPool = bufferPool;
 
         var channelConfiguration = new InitializingNioSocketChannel(javaChannel, eventLoop);
 
         channelInitializer.initChannel(channelConfiguration);
 
-        //determine executor
-        EventExecutorGroup<?> handlerExecutorGroup = channelConfiguration.executorGroup();
-        if (handlerExecutorGroup == null || eventLoop.group() == handlerExecutorGroup) {
-            //如果没有单独指定 executor 去执行用户代码, 那么使用当前 event loop 执行.
-            handlerExecutor = eventLoop;
-        } else {
-            handlerExecutor = handlerExecutorGroup.next();
-        }
-
         dispatcher = new ChannelHandlerDispatcher(
-                handlerExecutor,
                 context,
                 channelConfiguration.handlerExecutorPair(),
                 (data) -> {
@@ -161,7 +147,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
     private void processReadableEvent() throws IOException {
         int n;
         do {
-            RecyclableBuffer buf = bufferPool.take(lettyConf.readBufSize());
+            RecyclableBuffer buf = bufferPool.take(lettyProperties.readBufSize());
             n = buf.readFromChannel(javaChannel);
             dispatcher.input(buf);
         } while (n > 0);
@@ -278,7 +264,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
         if (outputClosed) {
             dispatcher.onClosed();
             destroy();
-        } else if (!lettyConf.isAllowHalfClosure()) {
+        } else if (!lettyProperties.isAllowHalfClosure()) {
             shutdownOutput();
         }
     }
