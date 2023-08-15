@@ -9,8 +9,6 @@ import io.github.light0x00.lighty.core.dispatcher.writestrategy.ByteBufferWriteS
 import io.github.light0x00.lighty.core.dispatcher.writestrategy.FileChannelWriteStrategy;
 import io.github.light0x00.lighty.core.dispatcher.writestrategy.RingBufferWriteStrategy;
 import io.github.light0x00.lighty.core.dispatcher.writestrategy.WriteStrategy;
-import io.github.light0x00.lighty.core.eventloop.EventExecutor;
-import io.github.light0x00.lighty.core.eventloop.EventExecutorGroup;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop;
 import io.github.light0x00.lighty.core.facade.*;
 import io.github.light0x00.lighty.core.handler.ChannelContext;

@@ -67,8 +67,9 @@ class ChannelHandlerDispatcher(
 
             if (handler is OutboundChannelHandler) {
                 if (!skipWriteEvent(handler)) {
+                    //出方向与入方向相反, 后加入的 handler 位于 pipeline 的前端
                     @Suppress("UNCHECKED_CAST")
-                    outboundHandlers.add(pair as ChannelHandlerExecutorPair<OutboundChannelHandler>)
+                    outboundHandlers.addFirst(pair as ChannelHandlerExecutorPair<OutboundChannelHandler>)
                 }
             }
 
