@@ -14,4 +14,5 @@ module io.github.light0x00.lighty.core {
     exports io.github.light0x00.lighty.core.handler;
     exports io.github.light0x00.lighty.core.concurrent;
     exports io.github.light0x00.lighty.core.facade;
+    exports io.github.light0x00.lighty.core.dispatcher to io.github.light0x00.lighty.core;
 }

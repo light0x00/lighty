@@ -65,13 +65,6 @@ public class NioEventLoop implements EventExecutor {
         selector = Selector.open();
     }
 
-    private void addTask(Runnable runnable, boolean wakeup) {
-        tasks.offer(runnable);
-        if (wakeup) {
-            wakeup();
-        }
-    }
-
     @Override
     public void execute(@Nonnull Runnable command) {
 
@@ -164,15 +157,7 @@ public class NioEventLoop implements EventExecutor {
         log.debug("Event loop started");
         workerThread = Thread.currentThread();
         while (!Thread.currentThread().isInterrupted()) {
-            Runnable r;
-            while ((r = tasks.poll()) != null) {
-                try {
-                    r.run();
-                    processResultIfPossible(r);
-                } catch (Throwable th) {
-                    log.debug("Error occurred while process task", th);
-                }
-            }
+            processAllTasks();
             selector.select();
             Set<SelectionKey> events = selector.selectedKeys();
             Iterator<SelectionKey> it = events.iterator();
@@ -189,8 +174,23 @@ public class NioEventLoop implements EventExecutor {
                 it.remove();
             }
         }
+        //Always ensure all the tasks executed, even through shutdown
+        //It means there is no `shutdownNow`, which drop the remaining tasks in queue.
+        processAllTasks();
         onTerminated();
         log.debug("Event loop terminated");
+    }
+
+    private void processAllTasks() {
+        Runnable r;
+        while ((r = tasks.poll()) != null) {
+            try {
+                r.run();
+                processResultIfPossible(r);
+            } catch (Throwable th) {
+                log.debug("Error occurred while process task", th);
+            }
+        }
     }
 
     private static void processResultIfPossible(Runnable r) throws Throwable {
