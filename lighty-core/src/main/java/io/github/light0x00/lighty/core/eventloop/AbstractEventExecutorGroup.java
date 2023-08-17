@@ -33,7 +33,7 @@ public abstract class AbstractEventExecutorGroup<T extends EventExecutor> implem
     @SneakyThrows
     @SuppressWarnings("unchecked")
     public AbstractEventExecutorGroup(int threadNum, Executor executor) {
-        eventLoops = (T[]) new EventExecutor[2];
+        eventLoops = (T[]) new EventExecutor[threadNum];
 
         for (int i = 0; i < threadNum; i++) {
             eventLoops[i] = newEventLoop(executor);
