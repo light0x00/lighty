@@ -116,6 +116,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
                 channelConfiguration.handlerExecutorPair(),
                 (data) -> {
                     log.warn("Discarded inbound message {} that reached at the tail of the pipeline. Please check your pipeline configuration.", data);
+                    tryRecycle(data);
                 },
                 (data, future, flush) -> {
                     if (eventLoop.inEventLoop()) {
@@ -144,11 +145,15 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
 
     private void processReadableEvent() throws IOException {
         int n;
-        do {
+        while (true) {
             RecyclableBuffer buf = bufferPool.take(lettyProperties.readBufSize());
             n = buf.readFromChannel(javaChannel);
-            dispatcher.input(buf);
-        } while (n > 0);
+            if (n > 0)
+                dispatcher.input(buf);
+            else
+                break;
+        }
+
         if (n == -1) {
             log.debug("Received FIN from {}", javaChannel.getRemoteAddress());
 
@@ -170,10 +175,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             if (writer.remaining() == 0) {
                 outputBuffer.poll();
                 pair.future().setSuccess();
-                if (writer.getSource() instanceof RecyclableBuffer recyclable) {
-                    recyclable.release();
-                    log.debug("Recycle buffer {}", recyclable);
-                }
+                tryRecycle(writer.getSource());
             } else {
                 //如果还有剩余，意味 socket 发送缓冲着已经满了，只能等待下一次 Writable 事件
                 log.debug("Underlying socket sending buffer is full, wait for the next time writable event.");
@@ -189,6 +191,13 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
 
         key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
         log.debug("All the outbound buffers flushed, remove interest to writeable event.");
+    }
+
+    private static void tryRecycle(Object data) {
+        if (data instanceof RecyclableBuffer recyclable) {
+            recyclable.release();
+            log.debug("Recycle buffer {}", recyclable);
+        }
     }
 
     /**

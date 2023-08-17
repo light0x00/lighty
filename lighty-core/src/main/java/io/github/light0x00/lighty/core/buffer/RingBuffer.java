@@ -244,7 +244,8 @@ public class RingBuffer {
             //Impossible to overflow the range of int,
             //cuz to the buffers are fragments from only one ByteBuffer, which is at most Integer.MAX_VALUE bytes
             int n = (int) channel.read(buffers);
-            moveWriteOffset(n);
+            if (n > 0)
+                moveWriteOffset(n);
             return n;
         }
         return 0;
@@ -260,7 +261,8 @@ public class RingBuffer {
                     .map(Fragment::sliceBuf)
                     .toArray(ByteBuffer[]::new);
             int n = (int) channel.write(buffers); //不可能超过 int 范围
-            moveReadOffset(n);
+            if (n > 0)
+                moveReadOffset(n);
             return n;
         }
         return 0;
