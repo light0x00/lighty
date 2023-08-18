@@ -93,10 +93,10 @@ class ChannelHandlerDispatcher(
                 closedEventObservers.add(pair)
             }
         }
-        inboundChain = buildInvocationChain(
+        inboundChain = buildInboundInvocationChain(
             context, inboundHandlers, inboundReceiver
         )
-        outboundChain = buildInvocationChain(
+        outboundChain = buildOutboundInvocationChain(
             context, outboundHandlers, outboundReceiver
         )
     }
@@ -193,21 +193,33 @@ class ChannelHandlerDispatcher(
         val context: ChannelContext,
         val next: OutboundPipelineInvocation
     ) : OutboundPipelineInvocation {
-        override fun invoke(dataIn: Any, future: ListenableFutureTask<Void>, flush: Boolean) {
+        override fun invoke(dataIn: Any, writeFuture: ListenableFutureTask<Void>, flush: Boolean) {
             if (executor.inEventLoop()) {
-                invoke0(dataIn, future, flush)
+                invoke0(dataIn, writeFuture, flush)
             } else {
-                executor.execute { invoke0(dataIn, future, flush) }
+                executor.execute { invoke0(dataIn, writeFuture, flush) }
             }
         }
 
-        private fun invoke0(dataIn: Any, future: ListenableFutureTask<Void>, flush: Boolean) {
+        private fun invoke0(dataIn: Any, upstreamFuture: ListenableFutureTask<Void>, flush: Boolean) {
             try {
-                handler.onWrite(context.nextContext(next), dataIn)
-                { dataOut: Any ->
-                    next.invoke(dataOut, future, flush)
-                    future
-                }
+                val downstreamContext = context.downstreamContext(next)
+                handler.onWrite(downstreamContext, dataIn,
+                    object : OutboundPipeline {
+                        override fun invoke(data: Any): ListenableFutureTask<Void> {
+                            return if (flush) {
+                                downstreamContext.channel().writeAndFlush(data)
+                            } else {
+                                downstreamContext.channel().write(data)
+                            }
+                        }
+
+                        override fun upstreamFuture(): ListenableFutureTask<Void> {
+                            return upstreamFuture
+                        }
+
+                    })
+
             } catch (th: Throwable) {
                 invokeExceptionCaught(handler, context, th)
             }
@@ -278,21 +290,21 @@ class ChannelHandlerDispatcher(
             }
         }
 
-        fun buildInvocationChain(
+        fun buildInboundInvocationChain(
             context: ChannelContext,
-            handlers: List<ChannelHandlerExecutorPair<InboundChannelHandler>>,
+            pairs: List<ChannelHandlerExecutorPair<InboundChannelHandler>>,
             receiver: InboundPipelineInvocation
         ): InboundPipelineInvocation {
 
             var invocation = receiver
-            for ((handler, executor) in handlers.asReversed()) {
+            for ((handler, executor) in pairs.asReversed()) {
                 val next = invocation
                 invocation = InboundPipelineInvocationImpl(executor, handler, context, next)
             }
             return invocation
         }
 
-        fun buildInvocationChain(
+        fun buildOutboundInvocationChain(
             context: ChannelContext,
             pairs: List<ChannelHandlerExecutorPair<OutboundChannelHandler>>,
             receiver: OutboundPipelineInvocation

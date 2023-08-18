@@ -52,9 +52,9 @@ interface ChannelContext {
      *            write operation
      * ```
      *
-     * That's the reason why we need [nextContext]
+     * That's the reason why we need [downstreamContext]
      */
-    fun nextContext(outboundPipeline: OutboundPipelineInvocation): ChannelContext {
+    fun downstreamContext(downstream: OutboundPipelineInvocation): ChannelContext {
         //重写 context
         return object : ChannelContext by this {
             override fun channel(): NioSocketChannel {
@@ -67,13 +67,13 @@ interface ChannelContext {
                      */
                     override fun write(data: Any): ListenableFutureTask<Void> {
                         val future = ListenableFutureTask<Void>(null) //调用 context.write 视为一次全新的写, 所以这里不沿用原 future
-                        outboundPipeline.invoke(data, future, false);
+                        downstream.invoke(data, future, false)
                         return future
                     }
 
                     override fun writeAndFlush(data: Any): ListenableFutureTask<Void> {
                         val future = ListenableFutureTask<Void>(null)
-                        outboundPipeline.invoke(data, future, true);
+                        downstream.invoke(data, future, true)
                         return future
                     }
                 }
