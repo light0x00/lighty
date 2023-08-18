@@ -45,6 +45,13 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
         }
     }
 
-    protected abstract void decode(ChannelContext context, RingBuffer data, InboundPipeline next);
+    /**
+     * Each time the readable event triggered, this method will be invoked, passing the accumulated bytes.
+     * A point need to aware is that the accumulated bytes are not necessary to reach the number specified.
+     * In other words, the bytes passed to this method, may not be full.
+     *
+     * @param bytes the bytes accumulated
+     */
+    protected abstract void decode(ChannelContext context, RingBuffer bytes, InboundPipeline next);
 
 }

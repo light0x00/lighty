@@ -5,6 +5,12 @@ package io.github.light0x00.lighty.core.handler;
  */
 public interface InboundChannelHandler extends ChannelHandler {
 
+    /**
+     * Each time the readable event triggered, this method will be invoked, passing the accumulated bytes.
+     * @param context the context of current channel.
+     * @param data the data passed by the upstream of current phase.
+     * @param next the downstream of current phase.
+     */
     void onRead(ChannelContext context, Object data, InboundPipeline next);
 
 }
