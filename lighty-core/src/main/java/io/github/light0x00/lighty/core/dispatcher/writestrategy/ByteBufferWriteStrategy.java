@@ -34,4 +34,9 @@ public class ByteBufferWriteStrategy implements WriteStrategy {
     public Object getSource() {
         return buffer;
     }
+
+    @Override
+    public void close() {
+
+    }
 }

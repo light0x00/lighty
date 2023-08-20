@@ -41,11 +41,11 @@ public class OutputBuffer {
         return outputBuffer.isEmpty();
     }
 
-    public void invalid() {
+    public void invalid(Throwable cause) {
         for (WriterFuturePair bufFuture; (bufFuture = outputBuffer.poll()) != null; ) {
-            bufFuture.future().setFailure(new LightyException("Output Buffer cleared"));
+            bufFuture.future().setFailure(cause);
         }
         if (size > 0)
-            log.debug("Invalid output buffer: {} bytes", size);
+            log.debug("Invalid output buffer {} bytes, due to forced close", size);
     }
 }

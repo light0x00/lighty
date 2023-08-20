@@ -1,5 +1,6 @@
 package io.github.light0x00.lighty.core.dispatcher.writestrategy;
 
+import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
 import lombok.AllArgsConstructor;
 
@@ -28,5 +29,12 @@ public class RingBufferWriteStrategy implements WriteStrategy {
     @Override
     public Object getSource() {
         return ringBuffer;
+    }
+
+    @Override
+    public void close() {
+        if(ringBuffer instanceof RecyclableBuffer recyclable){
+            recyclable.release();
+        }
     }
 }

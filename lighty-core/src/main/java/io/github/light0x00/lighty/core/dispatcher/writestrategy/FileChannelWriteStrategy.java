@@ -2,6 +2,7 @@ package io.github.light0x00.lighty.core.dispatcher.writestrategy;
 
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -12,6 +13,7 @@ import java.nio.channels.GatheringByteChannel;
  * @since 2023/8/12
  */
 @AllArgsConstructor
+@Slf4j
 public class FileChannelWriteStrategy implements WriteStrategy {
     private FileChannel fileChannel;
     private long position;
@@ -36,5 +38,10 @@ public class FileChannelWriteStrategy implements WriteStrategy {
     @Override
     public Object getSource() {
         return fileChannel;
+    }
+
+    @Override
+    public void close() throws IOException {
+        fileChannel.close();
     }
 }

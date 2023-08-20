@@ -12,7 +12,7 @@ import io.github.light0x00.lighty.core.dispatcher.writestrategy.WriteStrategy;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop;
 import io.github.light0x00.lighty.core.facade.*;
 import io.github.light0x00.lighty.core.handler.ChannelContext;
-import io.github.light0x00.lighty.core.handler.DuplexChannelHandler;
+import io.github.light0x00.lighty.core.handler.ChannelHandler;
 import io.github.light0x00.lighty.core.util.EventLoopConfinement;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -27,9 +27,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
 /**
- * 基于责任链和观察者模式分发底层事件
- * <p>
- * handle the nio event and dispatch them to {@link DuplexChannelHandler}
+ * Handle the nio event and dispatch them to {@link ChannelHandler}
  *
  * @author light0x00
  * @since 2023/6/29
@@ -56,18 +54,12 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
     private final OutputBuffer outputBuffer = new OutputBuffer();
 
     /**
-     * 对方是否发送 FIN 包, 这意味着已经读完了 socket 读缓冲区的最后一个字节
-     *
-     * @implNote Be aware that should only be access by current event loop thread,
-     * cannot be shared between threads.
+     * 当前端是否发送了 FIN 包, 这意味着不会再写入更多数据到 socket 写缓冲区
      */
     private boolean outputClosed = true;
 
     /**
-     * 当前端是否发送了 FIN 包, 这意味着不会再写入更多数据到 socket 写缓冲区
-     *
-     * @implNote Be aware that should only be access by current event loop thread,
-     * cannot be shared between threads.
+     * 对方是否发送 FIN 包, 这意味着已经读完了 socket 读缓冲区的最后一个字节
      */
     private boolean inputClosed = true;
 
@@ -116,7 +108,6 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
                 channelConfiguration.handlerExecutorPair(),
                 (data) -> {
                     log.warn("Discarded inbound message {} that reached at the tail of the pipeline. Please check your pipeline configuration.", data);
-                    tryRecycle(data);
                 },
                 (data, future, flush) -> {
                     if (eventLoop.inEventLoop()) {
@@ -172,10 +163,11 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
              * cannot write any more bytes than are free in the socket's output buffer.
              */
             writer.write(javaChannel);
+
             if (writer.remaining() == 0) {
                 outputBuffer.poll();
                 pair.future().setSuccess();
-                tryRecycle(writer.getSource());
+                writer.close();
             } else {
                 //如果还有剩余，意味 socket 发送缓冲着已经满了，只能等待下一次 Writable 事件
                 log.debug("Underlying socket sending buffer is full, wait for the next time writable event.");
@@ -191,13 +183,6 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
 
         key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
         log.debug("All the outbound buffers flushed, remove interest to writeable event.");
-    }
-
-    private static void tryRecycle(Object data) {
-        if (data instanceof RecyclableBuffer recyclable) {
-            recyclable.release();
-            log.debug("Recycle buffer {}", recyclable);
-        }
     }
 
     /**
@@ -231,7 +216,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             return writeFuture;
         }
 
-        if (!flush && outputBuffer.size() < flushThreshold) {
+        if (!flush && (outputBuffer.size() + writer.remaining()) < flushThreshold) {
             outputBuffer.offer(new WriterFuturePair(writer, writeFuture));
             return writeFuture;
         }
@@ -299,7 +284,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             return;
         outputClosed = true;
         //清除输出缓冲
-        outputBuffer.invalid();
+        outputBuffer.invalid(new LightyException("Channel output is going to shut down"));
         //移除写监听
         key.interestOps(key.interestOps() ^ SelectionKey.OP_WRITE);
         //关闭底层 socket 的输出
@@ -349,7 +334,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
         //close 的时候有可能已经调用了 shutdownOutput , 也可能没有
         //如果没有, 则需要执行一次清空
         if (!outputClosed) {
-            outputBuffer.invalid();
+            outputBuffer.invalid(new LightyException("Channel is going to close"));
         }
         outputClosed = inputClosed = true;
         log.debug("Channel closed: {}", javaChannel.toString());

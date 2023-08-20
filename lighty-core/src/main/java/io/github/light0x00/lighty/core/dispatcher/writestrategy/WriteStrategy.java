@@ -13,4 +13,6 @@ public interface WriteStrategy {
     long remaining();
 
     Object getSource();
+
+    void close() throws IOException;
 }
