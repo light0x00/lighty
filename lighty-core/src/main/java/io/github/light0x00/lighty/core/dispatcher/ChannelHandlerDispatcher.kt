@@ -201,13 +201,13 @@ class ChannelHandlerDispatcher(
             }
         }
 
-        private fun invoke0(dataIn: Any, upstreamFuture: ListenableFutureTask<Void>, flush: Boolean) {
+        private fun invoke0(upstreamData: Any, upstreamFuture: ListenableFutureTask<Void>, upstreamFlush: Boolean) {
             try {
                 val downstreamContext = context.downstreamContext(next)
-                handler.onWrite(downstreamContext, dataIn,
+                handler.onWrite(downstreamContext, upstreamData,
                     object : OutboundPipeline {
-                        override fun invoke(data: Any): ListenableFutureTask<Void> {
-                            return if (flush) {
+                        override fun next(data: Any): ListenableFutureTask<Void> {
+                            return if (upstreamFlush) {
                                 downstreamContext.channel().writeAndFlush(data)
                             } else {
                                 downstreamContext.channel().write(data)

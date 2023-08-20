@@ -6,6 +6,7 @@ package io.github.light0x00.lighty.core.handler;
  */
 public interface InboundPipeline {
 
-    void invoke(Object data);
+    //TODO 返回 future
+    void next(Object data);
 
 }

@@ -7,7 +7,7 @@ package io.github.light0x00.lighty.core.handler;
 public abstract class OutboundChannelHandlerAdapter extends ChannelHandlerAdapter implements OutboundChannelHandler {
     @Override
     @Skip
-    public void onWrite(ChannelContext context, Object data, OutboundPipeline next) {
+    public void onWrite(ChannelContext context, Object data, OutboundPipeline pipeline) {
 
     }
 }

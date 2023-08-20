@@ -8,11 +8,11 @@ public abstract class DuplexChannelHandlerAdapter extends ChannelHandlerAdapter 
 
     @Override
     @Skip
-    public void onRead(ChannelContext context, Object data, InboundPipeline next) {
+    public void onRead(ChannelContext context, Object data, InboundPipeline pipeline) {
     }
 
     @Override
     @Skip
-    public void onWrite(ChannelContext context, Object data, OutboundPipeline next) {
+    public void onWrite(ChannelContext context, Object data, OutboundPipeline pipeline) {
     }
 }
