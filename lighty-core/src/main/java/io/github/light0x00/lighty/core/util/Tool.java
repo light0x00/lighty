@@ -58,7 +58,7 @@ public class Tool {
         cause.printStackTrace(pout);
         pout.flush();
         try {
-            return new String(out.toByteArray());
+            return out.toString();
         } finally {
             try {
                 out.close();
