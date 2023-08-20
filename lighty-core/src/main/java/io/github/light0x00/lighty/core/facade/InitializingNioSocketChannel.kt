@@ -23,19 +23,14 @@ class InitializingNioSocketChannel(javaChannel: SocketChannel, private var event
 
     private val handlerExecutorPairs: MutableList<ChannelHandlerExecutorPair<ChannelHandler>> = LinkedList();
 
+    private val pipeline = ChannelPipeline()
+
     /**
      * The [EventExecutorGroup] for executing handlers.
      */
-    @set:JvmName("executorGroup")
-    var executorGroup: EventExecutorGroup<*>? = null
-        set(value) {
-            if (value == null)
-                throw IllegalArgumentException("null")
-            field = value
-            eventExecutor = value.next()
-        }
-
-    private val pipeline = ChannelPipeline()
+    fun executorGroup(group: EventExecutorGroup<*>) {
+        eventExecutor = group.next()
+    }
 
     fun pipeline(): ChannelPipeline {
         return pipeline
