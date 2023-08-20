@@ -206,7 +206,7 @@ public class RingBuffer {
         Fragment dstFrag = writableFragments().first();
         int putCnt = 0;
         for (; srcFrag != null && dstFrag != null; ) {
-            int srcFragRemaining = srcFrag.length; //目的碎片 可读数量
+            int srcFragRemaining = srcFrag.length; //源碎片 可读数量
             int dstFragRemaining = dstFrag.length; //目的碎片 可写数量
 
             int putLen = Math.min(Math.min(srcFragRemaining, dstFragRemaining), length - putCnt);
@@ -290,6 +290,12 @@ public class RingBuffer {
         readPosition = 0;
         writePosition = 0;
         bytesUnRead = 0;
+    }
+
+    public ByteBuffer[] readableSlices() {
+        return Arrays.stream(readableFragments().toArray())
+                .map(Fragment::sliceBuf)
+                .toArray(ByteBuffer[]::new);
     }
 
     private FragmentList readableFragments() {
