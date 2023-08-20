@@ -93,6 +93,20 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
         }
     }
 
+    public ListenableFutureTask<T> addListener(ListenableFutureTask<T> future) {
+        return addListener(new GenericFutureListener<>() {
+            @Override
+            public void onSuccess(T result) {
+                future.setSuccess();
+            }
+
+            @Override
+            public void onFailure(@Nonnull Throwable cause) {
+                future.setFailure(cause);
+            }
+        });
+    }
+
     public ListenableFutureTask<T> addListener(FutureListener<T> listener) {
         return addListener(listener, defaultNotifier);
     }
@@ -144,6 +158,10 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
     }
 
     private synchronized void notifyListeners() {
+//        if (listeners.isEmpty() && !this.isSuccess()) {
+//            log.debug("A future failure occurred, but there is no listener, default to print exception stack. ", cause());
+//            return;
+//        }
         for (ListenerExecutorPair<T> pair : listeners) {
             notifyListener(pair);
         }

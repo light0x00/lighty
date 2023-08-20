@@ -1,8 +1,11 @@
-package io.github.light0x00.lighty.core.handler;
+package io.github.light0x00.lighty.codec;
 
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
 import io.github.light0x00.lighty.core.facade.LightyException;
+import io.github.light0x00.lighty.core.handler.ChannelContext;
+import io.github.light0x00.lighty.core.handler.InboundChannelHandlerAdapter;
+import io.github.light0x00.lighty.core.handler.InboundPipeline;
 
 /**
  * @author light0x00
@@ -29,13 +32,12 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
     }
 
     @Override
-    public void onRead(ChannelContext context, Object data, InboundPipeline next) {
+    public void onRead(ChannelContext context, Object data, InboundPipeline pipeline) {
         try (RecyclableBuffer srcBuf = (RecyclableBuffer) data) {
 
             while (srcBuf.remainingCanGet() > 0) {
                 decodeBuf.put(srcBuf, Math.min(decodeBuf.remainingCanPut(), srcBuf.remainingCanGet()));
-
-                decode(context, decodeBuf, next);
+                decode(context, decodeBuf, pipeline);
 
                 if (decodeBuf.remainingCanPut() == 0) {
                     throw new LightyException("The decode buffer is already full, but the decoder has not yet read it. ");
@@ -52,6 +54,6 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
      *
      * @param bytes the bytes accumulated
      */
-    protected abstract void decode(ChannelContext context, RingBuffer bytes, InboundPipeline next);
+    protected abstract void decode(ChannelContext context, RingBuffer bytes, InboundPipeline pipeline);
 
 }
