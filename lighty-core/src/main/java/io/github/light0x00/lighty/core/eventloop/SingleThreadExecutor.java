@@ -57,10 +57,12 @@ public class SingleThreadExecutor implements EventExecutor {
      * 因任何原因而导致未被执行,(如队列容量上限或已经shutdown),
      * 都将转交给 {@link RejectedExecutionHandler}
      */
-    private final RejectedExecutionHandler rejectedExecutionHandler;
+    private final RejectedExecutionHandler reachLimitCauseRejectedExecutionHandler = (task, executor) -> {
+        throw new RejectedExecutionException("Rejected execution, pending tasks reach the maximum number.");
+    };
 
-    private static final RejectedExecutionHandler DEFAULT_REJECTED_EXECUTION_HANDLER = (task, executor) -> {
-        throw new RejectedExecutionException();
+    private final RejectedExecutionHandler shutdownCauseRejectedExecutionHandler = (task, executor) -> {
+        throw new RejectedExecutionException("Rejected execution, event-loop already shutdown!");
     };
 
     private static final AtomicIntegerFieldUpdater<SingleThreadExecutor> STATE_UPDATER =
@@ -73,22 +75,13 @@ public class SingleThreadExecutor implements EventExecutor {
         this(Integer.MAX_VALUE, executor);
     }
 
-    public SingleThreadExecutor(Executor executor, RejectedExecutionHandler rejectedExecutionHandler) {
-        this(Integer.MAX_VALUE, executor, rejectedExecutionHandler);
-    }
-
     public SingleThreadExecutor(int maxPendingTasks, Executor executor) {
-        this(maxPendingTasks, executor, DEFAULT_REJECTED_EXECUTION_HANDLER);
-    }
-
-    public SingleThreadExecutor(int maxPendingTasks, Executor executor, RejectedExecutionHandler rejectedExecutionHandler) {
         this.executor = executor;
         this.queue = new LinkedBlockingQueue<>(maxPendingTasks);
-        this.rejectedExecutionHandler = rejectedExecutionHandler;
     }
 
     /**
-     * 执行一个指定任务,如果因任何原因而导致未被执行,比如达到队列容量上限或已经 shutdown/shutdownNow,该任务被转交给 {@link #rejectedExecutionHandler}
+     * 执行一个指定任务,如果因任何原因而导致未被执行,比如达到队列容量上限或已经 shutdown/shutdownNow,该任务将被拒绝执行
      */
     @Override
     public void execute(@Nonnull Runnable command) {
@@ -98,7 +91,10 @@ public class SingleThreadExecutor implements EventExecutor {
          * 如果因为 offer 失败(通常是触发队列容量上限导致), 则直接 reject, 避免 EvenLoop 线程投递任务而阻塞.
          * 参考 netty SingleThreadEventExecutor#addTask
          */
-        if (state <= RUNNING && queue.offer(command)) {
+        if (state <= RUNNING) {
+            if (!queue.offer(command)) {
+                reachLimitCauseRejectedExecutionHandler.rejected(command, this);
+            }
             /*
              * 如下两个操作之间的 race condition:
              * execute(Runnable) 会执行一个 if-then-act 的动作, if state == RUNNING then queue.offer(task)
@@ -127,12 +123,16 @@ public class SingleThreadExecutor implements EventExecutor {
              */
             if (state > RUNNING) {
                 if (queue.remove(command)) {
-                    rejectedExecutionHandler.rejected(command, this);
+                    shutdownCauseRejectedExecutionHandler.rejected(command, this);
                 }
             }
         } else {
-            rejectedExecutionHandler.rejected(command, this);
+            shutdownCauseRejectedExecutionHandler.rejected(command, this);
         }
+    }
+
+    private static void reject(@Nonnull Runnable command, String cause) {
+        throw new RejectedExecutionException(cause);
     }
 
     /**

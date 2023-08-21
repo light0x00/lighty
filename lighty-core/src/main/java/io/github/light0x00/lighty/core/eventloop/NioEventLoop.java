@@ -40,8 +40,12 @@ public class NioEventLoop implements EventExecutor {
      * 因任何原因而导致未被执行,(如队列容量上限或已经shutdown),
      * 都将转交给 {@link RejectedExecutionHandler}
      */
-    private final RejectedExecutionHandler rejectedExecutionHandler = (task, executor) -> {
-        throw new RejectedExecutionException();
+    private final RejectedExecutionHandler reachLimitCauseRejectedExecutionHandler = (task, executor) -> {
+        throw new RejectedExecutionException("Rejected execution, the pending tasks reach the maximum number.");
+    };
+
+    private final RejectedExecutionHandler shutdownCauseRejectedExecutionHandler = (task, executor) -> {
+        throw new RejectedExecutionException("Rejected execution, event-loop already shutdown!");
     };
 
     private final Selector selector;
@@ -83,16 +87,18 @@ public class NioEventLoop implements EventExecutor {
          * 3.recheck condition, then decide confirm or rollback
          * */
         if (state.get() == RUNNING) {
-            tasks.offer(command);
+            if (!tasks.offer(command)) {
+                reachLimitCauseRejectedExecutionHandler.rejected(command, this);
+            }
             if (state.get() != RUNNING) {
                 if (tasks.remove(command)) {
-                    rejectedExecutionHandler.rejected(command, this);
+                    shutdownCauseRejectedExecutionHandler.rejected(command, this);
                 }
             } else {
                 wakeup();
             }
         } else {
-            rejectedExecutionHandler.rejected(command, this);
+            shutdownCauseRejectedExecutionHandler.rejected(command, this);
         }
 
     }
