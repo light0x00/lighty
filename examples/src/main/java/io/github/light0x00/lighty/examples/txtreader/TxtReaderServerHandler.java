@@ -43,6 +43,9 @@ public class TxtReaderServerHandler extends InboundChannelHandlerAdapter {
     public void onRead(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull InboundPipeline pipeline) {
         sendSplitLine(context);
         String command = String.valueOf(data);
+        if ("".equals(command)) {
+            return;
+        }
         try {
             int num = Integer.parseInt(command);
             sendContent(context, num);
@@ -88,7 +91,7 @@ public class TxtReaderServerHandler extends InboundChannelHandlerAdapter {
         } else if ("h".equals(command)) {
             sendMenu(context);
         } else {
-            context.writeAndFlush("Unrecognized command!");
+            context.writeAndFlush("Unrecognized command:" + command);
         }
     }
 

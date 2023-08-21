@@ -21,19 +21,32 @@ public class LineBaseMessageDecoder extends InboundChannelHandlerAdapter {
         String str = (String) data;
 
         int offset = 0;
-        int delimiterIdx;
+        Delimiter delimiter;
         while (offset < str.length()) {
-            if ((delimiterIdx = str.indexOf("\n", offset)) < 0) {
+            if ((delimiter = findDelimiter(str, offset)).index < 0) {
                 messageBuilder.append(str);
                 return;
             }
-            if (delimiterIdx >= offset) {
-                messageBuilder.append(str, offset, delimiterIdx);
-            }
+            messageBuilder.append(str, offset, delimiter.index);
             pipeline.next(unescape(messageBuilder.toString()));
             messageBuilder.setLength(0);
-            offset = delimiterIdx + 1;
+            offset = delimiter.index + delimiter.length;
         }
+    }
+
+    private static Delimiter findDelimiter(String str, int offset) {
+        int idx;
+        if ((idx = str.indexOf("\r\n", offset)) > -1) {
+            return new Delimiter(idx, 2);
+        } else if ((idx = str.indexOf("\n", offset)) > -1) {
+            return new Delimiter(idx, 1);
+        } else {
+            return new Delimiter(-1, 0);
+        }
+    }
+
+    record Delimiter(int index, int length) {
+
     }
 
     private static String unescape(String str) {
