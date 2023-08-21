@@ -9,6 +9,9 @@ import java.net.SocketAddress
  */
 interface NioSocketChannel : NioChannel {
 
+    /**
+     * @see [java.nio.channels.SocketChannel.getRemoteAddress]
+     */
     fun remoteAddress(): SocketAddress
 
     /**
@@ -27,12 +30,24 @@ interface NioSocketChannel : NioChannel {
      */
     fun writeAndFlush(data: Any): ListenableFutureTask<Void>
 
+    /**
+     * A future that will get notified when the channel get connected
+     */
     fun connectedFuture(): ListenableFutureTask<Void>
 
+    /**
+     * A future that will get notified when the channel closed
+     */
     fun closedFuture(): ListenableFutureTask<Void>
 
+    /**
+     * Shutdown the output side of the channel
+     */
     fun shutdownOutput(): ListenableFutureTask<Void>
 
+    /**
+     * Shutdown the input side of the channel, which means read completed.
+     */
     fun shutdownInput(): ListenableFutureTask<Void>
 
 }
