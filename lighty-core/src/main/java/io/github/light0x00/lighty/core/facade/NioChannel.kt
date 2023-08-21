@@ -8,7 +8,7 @@ import java.net.SocketOption
  * @author light0x00
  * @since 2023/8/9
  */
-interface NioChannel{
+interface NioChannel {
 
     fun close(): ListenableFutureTask<Void>
 

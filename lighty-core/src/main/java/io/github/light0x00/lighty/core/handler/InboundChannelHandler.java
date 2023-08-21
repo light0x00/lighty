@@ -9,10 +9,11 @@ public interface InboundChannelHandler extends ChannelHandler {
 
     /**
      * Each time the readable event triggered, this method will be invoked, passing the accumulated bytes.
-     * @param context the context of current channel.
-     * @param data the data passed by the upstream of current phase.
+     *
+     * @param context  the context of current channel.
+     * @param data     the data passed by the upstream of current phase.
      * @param pipeline the downstream of current phase.
      */
-    void onRead(@Nonnull ChannelContext context,@Nonnull Object data,@Nonnull InboundPipeline pipeline);
+    void onRead(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull InboundPipeline pipeline);
 
 }

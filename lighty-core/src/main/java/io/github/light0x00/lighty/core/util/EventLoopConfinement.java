@@ -7,7 +7,6 @@ import java.lang.annotation.Target;
 import static java.lang.annotation.ElementType.*;
 
 /**
- *
  * Indicate the code block must be executed only in current event loop.
  *
  * @author light0x00

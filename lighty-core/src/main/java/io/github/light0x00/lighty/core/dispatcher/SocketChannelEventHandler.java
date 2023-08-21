@@ -12,6 +12,7 @@ import io.github.light0x00.lighty.core.dispatcher.writestrategy.WriteStrategy;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoop;
 import io.github.light0x00.lighty.core.facade.*;
 import io.github.light0x00.lighty.core.handler.ChannelContext;
+import io.github.light0x00.lighty.core.handler.ChannelContextImpl;
 import io.github.light0x00.lighty.core.handler.ChannelHandler;
 import io.github.light0x00.lighty.core.util.EventLoopConfinement;
 import lombok.Getter;
@@ -94,10 +95,11 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             flushThreshold = c.getOption(StandardSocketOptions.SO_SNDBUF);
         }));
 
-        channel = new NioSocketChannelImpl();
-        context = buildContext();
         this.lettyProperties = lettyProperties;
         this.bufferPool = bufferPool;
+
+        channel = new NioSocketChannelImpl();
+        context = new ChannelContextImpl(channel, bufferPool);
 
         var channelConfiguration = new InitializingNioSocketChannel(javaChannel, eventLoop);
 
@@ -419,20 +421,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
 
     @Nonnull
     private ChannelContext buildContext() {
-        return new ChannelContext() {
-
-            @Nonnull
-            @Override
-            public NioSocketChannel channel() {
-                return channel;
-            }
-
-            @Nonnull
-            @Override
-            public RecyclableBuffer allocateBuffer(int capacity) {
-                return bufferPool.take(capacity);
-            }
-        };
+        return new ChannelContextImpl(channel, bufferPool);
     }
 
     class InboundTailInvocation implements InboundPipelineInvocation {

@@ -33,7 +33,7 @@ public class RingBufferWriteStrategy implements WriteStrategy {
 
     @Override
     public void close() {
-        if(ringBuffer instanceof RecyclableBuffer recyclable){
+        if (ringBuffer instanceof RecyclableBuffer recyclable) {
             recyclable.release();
         }
     }

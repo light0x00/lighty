@@ -48,7 +48,7 @@ class PipelineTest {
                             pipeline.next(data)
                                 .addListener { notifyUpstreamTimes.incrementAndGet() }
                                 .addListener {
-                                    context.channel().close()
+                                    context.close()
                                 }
                         }
                     },
@@ -92,15 +92,15 @@ class PipelineTest {
                     .add(object : OutboundChannelHandlerAdapter() {
                         override fun onWrite(context: ChannelContext, data: Any, pipeline: OutboundPipeline) {
                             //invoke a write inside outbound pipeline
-                            context.channel().writeAndFlush(data).addListener(pipeline.upstreamFuture())
+                            context.writeAndFlush(data).addListener(pipeline.upstreamFuture())
                         }
                     })
                     .add(object : OutboundChannelHandlerAdapter() {
                         override fun onConnected(context: ChannelContext) {
                             //write only for triggering outbound pipeline
-                            context.channel().writeAndFlush("1".toByteArray(StandardCharsets.UTF_8))
+                            context.writeAndFlush("1".toByteArray(StandardCharsets.UTF_8))
                                 .addListener {
-                                    context.channel().close()
+                                    context.close()
                                 }
                         }
 
@@ -108,7 +108,7 @@ class PipelineTest {
                             //denote that the data pass back the head of the outbound pipeline
                             //this will cause a endless loop
                             if (loopTimes.incrementAndGet() > 1) {
-                                context.channel().close()
+                                context.close()
                                 return
                             }
                             pipeline.next(data).addListener(pipeline.upstreamFuture())
@@ -125,7 +125,7 @@ class PipelineTest {
 
         channel.closedFuture().sync()
         serverChannel.close()
-        Assertions.assertEquals(1, loopTimes.get(),"Write inside outbound pipeline cause an endless loop")
+        Assertions.assertEquals(1, loopTimes.get(), "Write inside outbound pipeline cause an endless loop")
     }
 
 

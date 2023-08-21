@@ -217,7 +217,7 @@ public class SingleThreadExecutor implements EventExecutor {
         }
     }
 
-    private void run(){
+    private void run() {
         workerThread = Thread.currentThread();
         compareAndSetState(READY, RUNNING);
 

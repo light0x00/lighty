@@ -4,6 +4,6 @@ import javax.annotation.Nonnull;
 
 public interface OutboundChannelHandler extends ChannelHandler {
 
-    void onWrite(@Nonnull ChannelContext context,@Nonnull Object data,@Nonnull OutboundPipeline pipeline);
+    void onWrite(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull OutboundPipeline pipeline);
 
 }

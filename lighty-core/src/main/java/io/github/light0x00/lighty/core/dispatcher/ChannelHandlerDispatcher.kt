@@ -225,9 +225,9 @@ class ChannelHandlerDispatcher(
                     object : OutboundPipeline {
                         override fun next(data: Any): ListenableFutureTask<Void> {
                             return if (upstreamFlush) {
-                                downstreamContext.channel().writeAndFlush(data)
+                                downstreamContext.writeAndFlush(data)
                             } else {
-                                downstreamContext.channel().write(data)
+                                downstreamContext.write(data)
                             }
                         }
 
@@ -404,29 +404,32 @@ class ChannelHandlerDispatcher(
      *
      * That's the reason why we need [DownstreamChannelContext]
      */
-    class DownstreamChannelContext(val context: ChannelContext, val downstream: OutboundPipelineInvocation) :
-        ChannelContext by context {
-        override fun channel(): NioSocketChannel {
-            //重写 channel
-            return object : NioSocketChannel by context.channel() {
-                /**
-                 * 重写 write 方法, 使之将数据传给后续 handler, 而不是回到第一个, 造成死循环
-                 *
-                 * 调用 context.write 视为一次全新的写, 所以这里不沿用原 future; 这是与 OutboundPipeline#next 的区别
-                 */
-                override fun write(data: Any): ListenableFutureTask<Void> {
-                    val future = ListenableFutureTask<Void>(null) //调用 context.write 视为一次全新的写, 所以这里不沿用原 future
-                    downstream.invoke(data, future, false)
-                    return future
-                }
+    class DownstreamChannelContext(
+        private val context: ChannelContext,
+        private val downstream: OutboundPipelineInvocation
+    ) : ChannelContext by context {
 
-                override fun writeAndFlush(data: Any): ListenableFutureTask<Void> { //TODO 增加重载方法 允许外界传 promise
-                    val future = ListenableFutureTask<Void>(null)
-                    downstream.invoke(data, future, true)
-                    return future
-                }
-            }
+        /**
+         * 重写 write 方法, 使之将数据传给后续 handler, 而不是回到第一个, 造成死循环
+         *
+         * 调用 context.write 视为一次全新的写, 所以这里不沿用原 future; 这是与 OutboundPipeline#next 的区别
+         */
+        override fun write(data: Any): ListenableFutureTask<Void> {
+            val future = ListenableFutureTask<Void>(null) //调用 context.write 视为一次全新的写, 所以这里不沿用原 future
+            downstream.invoke(data, future, false)
+            return future
         }
+
+        override fun channel(): NioSocketChannel {
+            return object : NioSocketChannel by this {}
+        }
+
+        override fun writeAndFlush(data: Any): ListenableFutureTask<Void> { //TODO 增加重载方法 允许外界传 promise
+            val future = ListenableFutureTask<Void>(null)
+            downstream.invoke(data, future, true)
+            return future
+        }
+
     }
 
 }
