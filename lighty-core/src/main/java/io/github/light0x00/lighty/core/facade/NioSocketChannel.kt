@@ -2,6 +2,7 @@ package io.github.light0x00.lighty.core.facade
 
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
 import java.net.SocketAddress
+import java.nio.channels.FileChannel
 
 /**
  * @author light0x00
@@ -29,6 +30,16 @@ interface NioSocketChannel : NioChannel {
      * Equivalent to call [write] and [flush].
      */
     fun writeAndFlush(data: Any): ListenableFutureTask<Void>
+
+    /**
+     * Send file in a zero-copy way.
+     */
+    fun transfer(fc: FileChannel): ListenableFutureTask<Void>
+
+    /**
+     * Equivalent to call [transfer] and [flush].
+     */
+    fun transferAndFlush(fc: FileChannel): ListenableFutureTask<Void>
 
     /**
      * A future that will get notified when the channel get connected

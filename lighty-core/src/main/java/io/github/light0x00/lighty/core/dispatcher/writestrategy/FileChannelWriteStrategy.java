@@ -24,7 +24,7 @@ public class FileChannelWriteStrategy implements WriteStrategy {
 
     @Override
     public long write(GatheringByteChannel channel) throws IOException {
-        long written = fileChannel.transferTo(position, fileChannel.size() - position, channel);
+        long written = fileChannel.transferTo(position, remaining(), channel);
         position += written;
         return written;
     }

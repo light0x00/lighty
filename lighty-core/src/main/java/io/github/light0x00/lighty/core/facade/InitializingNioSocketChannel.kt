@@ -5,6 +5,7 @@ import io.github.light0x00.lighty.core.eventloop.EventExecutor
 import io.github.light0x00.lighty.core.eventloop.EventExecutorGroup
 import io.github.light0x00.lighty.core.handler.ChannelHandler
 import io.github.light0x00.lighty.core.handler.ChannelHandlerExecutorPair
+import java.nio.channels.FileChannel
 import java.nio.channels.SocketChannel
 import java.util.*
 
@@ -34,8 +35,9 @@ class InitializingNioSocketChannel(
     /**
      * The [EventExecutorGroup] for executing handlers.
      */
-    fun group(group: EventExecutorGroup<*>) {
+    fun group(group: EventExecutorGroup<*>) : InitializingNioSocketChannel{
         eventExecutor = group.next()
+        return this
     }
 
     fun pipeline(): ChannelPipeline {
@@ -55,6 +57,14 @@ class InitializingNioSocketChannel(
     }
 
     override fun writeAndFlush(data: Any): ListenableFutureTask<Void> {
+        throw LightyException("Unsupported operation!")
+    }
+
+    override fun transfer(fc: FileChannel): ListenableFutureTask<Void> {
+        throw LightyException("Unsupported operation!")
+    }
+
+    override fun transferAndFlush(fc: FileChannel): ListenableFutureTask<Void> {
         throw LightyException("Unsupported operation!")
     }
 

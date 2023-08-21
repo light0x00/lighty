@@ -11,8 +11,6 @@ import javax.annotation.Nonnull;
 @EventLoopConfinement
 public interface ChannelHandler {
 
-    void exceptionCaught(@Nonnull ChannelContext context, @Nonnull Throwable t);
-
     void onInitialize(@Nonnull ChannelContext context);
 
     void onDestroy(@Nonnull ChannelContext context);
@@ -31,5 +29,7 @@ public interface ChannelHandler {
      * Triggered when the 4-way handshake finished.
      */
     void onClosed(@Nonnull ChannelContext context);
+
+    void exceptionCaught(@Nonnull ChannelContext context, @Nonnull Throwable t);
 
 }

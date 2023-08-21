@@ -6,8 +6,16 @@ import java.util.function.Consumer
  * @author light0x00
  * @since 2023/8/8
  */
-class FailureFutureListener(private val onFailure: Consumer<Throwable>) : FutureListener<Any> {
-    override fun operationComplete(future: ListenableFutureTask<Any>) {
+class FailureFutureListener<T>(private val onFailure: Consumer<Throwable>) : FutureListener<T> {
+
+    companion object {
+        @JvmStatic
+        fun <T> printStackTrace(): FailureFutureListener<T> {
+            return FailureFutureListener<T> { it.printStackTrace() }
+        }
+    }
+
+    override fun operationComplete(future: ListenableFutureTask<T>) {
         if (!future.isSuccess) {
             onFailure.accept(future.cause())
         }

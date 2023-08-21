@@ -12,5 +12,6 @@ interface ChannelContext : NioSocketChannel {
     fun allocateBuffer(capacity: Int): RecyclableBuffer
 
     fun channel(): NioSocketChannel
+
 }
 

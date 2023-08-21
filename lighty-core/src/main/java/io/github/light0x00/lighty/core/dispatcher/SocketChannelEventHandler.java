@@ -135,8 +135,10 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             n = buf.readFromChannel(javaChannel);
             if (n > 0)
                 dispatcher.input(buf);
-            else
+            else {
+                buf.release();
                 break;
+            }
         }
 
         if (n == -1) {
@@ -417,11 +419,18 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
         public void flush() {
             eventLoop.execute(SocketChannelEventHandler.this::flush);
         }
-    }
 
-    @Nonnull
-    private ChannelContext buildContext() {
-        return new ChannelContextImpl(channel, bufferPool);
+        @Nonnull
+        @Override
+        public ListenableFutureTask<Void> transfer(@Nonnull FileChannel fc) {
+            return dispatcher.transferTo(fc, false);
+        }
+
+        @Nonnull
+        @Override
+        public ListenableFutureTask<Void> transferAndFlush(@Nonnull FileChannel fc) {
+            return dispatcher.transferTo(fc, true);
+        }
     }
 
     class InboundTailInvocation implements InboundPipelineInvocation {

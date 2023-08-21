@@ -10,6 +10,7 @@ import io.github.light0x00.lighty.core.util.Tool.getMethod
 import io.github.light0x00.lighty.core.util.Tool.stackTraceToString
 import io.github.light0x00.lighty.core.util.log
 import lombok.extern.slf4j.Slf4j
+import java.nio.channels.FileChannel
 import java.util.*
 
 /**
@@ -22,7 +23,7 @@ class ChannelHandlerDispatcher(
     eventExecutor: EventExecutor,
     handlerExecutorPairs: List<ChannelHandlerExecutorPair<ChannelHandler>>,
     inboundReceiver: InboundPipelineInvocation,
-    outboundReceiver: OutboundPipelineInvocation
+    private val outboundReceiver: OutboundPipelineInvocation
 ) : Loggable {
 
     private var inboundChain: InboundPipelineInvocation
@@ -166,6 +167,12 @@ class ChannelHandlerDispatcher(
         val writeFuture = ListenableFutureTask<Void>()
         outboundChain.invoke(data, writeFuture, flush)
         return writeFuture
+    }
+
+    fun transferTo(fc: FileChannel, flush: Boolean): ListenableFutureTask<Void> {
+        val future = ListenableFutureTask<Void>()
+        outboundReceiver.invoke(fc, future, flush)
+        return future
     }
 
     private data class InboundPipelineInvocationImpl(
