@@ -15,6 +15,7 @@
         <dependency>
             <groupId>io.github.light0x00</groupId>
             <artifactId>lighty-core</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

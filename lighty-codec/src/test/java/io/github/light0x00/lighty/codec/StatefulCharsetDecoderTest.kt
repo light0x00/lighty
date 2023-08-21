@@ -10,7 +10,7 @@ import java.nio.charset.StandardCharsets
  * @author light0x00
  * @since 2023/8/20
  */
-class CharsetCodecTest {
+class StatefulCharsetDecoderTest {
     val decoder = StatefulCharsetDecoder(StandardCharsets.UTF_8.newDecoder())
 
     /**

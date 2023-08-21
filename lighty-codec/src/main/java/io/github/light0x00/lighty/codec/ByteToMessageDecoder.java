@@ -3,9 +3,11 @@ package io.github.light0x00.lighty.codec;
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
 import io.github.light0x00.lighty.core.facade.LightyException;
-import io.github.light0x00.lighty.core.handler.ChannelContext;
 import io.github.light0x00.lighty.core.handler.InboundChannelHandlerAdapter;
 import io.github.light0x00.lighty.core.handler.InboundPipeline;
+import io.github.light0x00.lighty.core.handler.ChannelContext;
+
+import javax.annotation.Nonnull;
 
 /**
  * @author light0x00
@@ -22,17 +24,17 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
     }
 
     @Override
-    public void onInitialize(ChannelContext context) {
+    public void onInitialize(@Nonnull ChannelContext context) {
         decodeBuf = context.allocateBuffer(bufSize);
     }
 
     @Override
-    public void onDestroy(ChannelContext context) {
+    public void onDestroy(@Nonnull ChannelContext context) {
         decodeBuf.release();
     }
 
     @Override
-    public void onRead(ChannelContext context, Object data, InboundPipeline pipeline) {
+    public void onRead(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull InboundPipeline pipeline) {
         try (RecyclableBuffer srcBuf = (RecyclableBuffer) data) {
 
             while (srcBuf.remainingCanGet() > 0) {
