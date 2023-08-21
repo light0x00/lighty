@@ -17,6 +17,11 @@
             <artifactId>lighty-core</artifactId>
 <!--            <version>0.0.1-alpha.1</version>-->
         </dependency>
+
+        <dependency>
+            <groupId>io.github.light0x00</groupId>
+            <artifactId>lighty-codec</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

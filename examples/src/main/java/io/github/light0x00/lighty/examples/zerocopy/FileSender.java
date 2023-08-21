@@ -5,6 +5,7 @@ import io.github.light0x00.lighty.core.handler.ChannelHandlerAdapter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.Nonnull;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -23,12 +24,11 @@ class FileSender extends ChannelHandlerAdapter {
 
     @SneakyThrows
     @Override
-    public void onConnected(ChannelContext context) {
+    public void onConnected(@Nonnull ChannelContext context) {
         long timeBegin = System.currentTimeMillis();
-        context.channel()
-                .write(FileChannel.open(filePath, StandardOpenOption.READ))
+        context.transfer(FileChannel.open(filePath, StandardOpenOption.READ))
                 .addListener(future -> {
-                    log.info("File send result: {}",future.isSuccess());
+                    log.info("File send result: {}", future.isSuccess());
                     if (future.isSuccess()) {
                         log.info("File sending completed! time elapsed: {}ms", System.currentTimeMillis() - timeBegin);
                         context.channel().close();
@@ -36,5 +36,6 @@ class FileSender extends ChannelHandlerAdapter {
                         future.cause().printStackTrace();
                     }
                 });
+        context.flush();
     }
 }

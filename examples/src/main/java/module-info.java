@@ -2,9 +2,12 @@
  * @author light0x00
  * @since 2023/8/9
  */
-module io.github.light0x00.lighty.examples {
+module lighty.examples {
     requires static jsr305;
     requires org.slf4j;
-    requires io.github.light0x00.lighty.core;
+    requires lighty.core;
+    requires lighty.codec;
     requires static lombok;
+    requires ch.qos.logback.classic;
+
 }

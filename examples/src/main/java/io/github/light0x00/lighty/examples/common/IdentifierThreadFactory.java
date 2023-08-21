@@ -1,4 +1,4 @@
-package io.github.light0x00.lighty.examples;
+package io.github.light0x00.lighty.examples.common;
 
 import javax.annotation.Nonnull;
 import java.util.concurrent.ThreadFactory;

@@ -1,12 +1,13 @@
 package io.github.light0x00.lighty.examples.zerocopy;
 
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
-import io.github.light0x00.lighty.core.handler.ChannelContext;
 import io.github.light0x00.lighty.core.handler.InboundChannelHandlerAdapter;
 import io.github.light0x00.lighty.core.handler.InboundPipeline;
+import io.github.light0x00.lighty.core.handler.ChannelContext;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
@@ -37,13 +38,13 @@ class FileReceiver extends InboundChannelHandlerAdapter {
     }
 
     @Override
-    public void onConnected(ChannelContext context) {
+    public void onConnected(@Nonnull ChannelContext context) {
         timeBegin = System.currentTimeMillis();
     }
 
     @SneakyThrows
     @Override
-    public void onRead(ChannelContext context, Object data, InboundPipeline next) {
+    public void onRead(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull InboundPipeline pipeline) {
         try (RecyclableBuffer buffer = (RecyclableBuffer) data) {
             while (buffer.remainingCanGet() > 0) {
                 int n = buffer.writeToChannel(fileChannel);
@@ -54,7 +55,7 @@ class FileReceiver extends InboundChannelHandlerAdapter {
 
     @SneakyThrows
     @Override
-    public void onReadCompleted(ChannelContext context) {
+    public void onReadCompleted(@Nonnull ChannelContext context) {
         fileChannel.close();
         log.info("File saved!, time elapsed: {} ms", System.currentTimeMillis() - timeBegin);
     }
