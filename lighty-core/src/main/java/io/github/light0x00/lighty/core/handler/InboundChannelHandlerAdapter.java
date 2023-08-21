@@ -1,5 +1,7 @@
 package io.github.light0x00.lighty.core.handler;
 
+import javax.annotation.Nonnull;
+
 /**
  * @author light0x00
  * @since 2023/7/4
@@ -8,7 +10,7 @@ public abstract class InboundChannelHandlerAdapter extends ChannelHandlerAdapter
 
     @Override
     @Skip
-    public void onRead(ChannelContext context, Object data, InboundPipeline pipeline) {
+    public void onRead(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull InboundPipeline pipeline) {
 
     }
 }

@@ -3,6 +3,7 @@ package io.github.light0x00.lighty.core.dispatcher
 import io.github.light0x00.lighty.core.buffer.RecyclableBuffer
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.lighty.core.eventloop.EventExecutor
+import io.github.light0x00.lighty.core.facade.NioSocketChannel
 import io.github.light0x00.lighty.core.handler.*
 import io.github.light0x00.lighty.core.util.Loggable
 import io.github.light0x00.lighty.core.util.Tool.getMethod
@@ -219,7 +220,7 @@ class ChannelHandlerDispatcher(
 
         private fun invoke0(upstreamData: Any, upstreamFuture: ListenableFutureTask<Void>, upstreamFlush: Boolean) {
             try {
-                val downstreamContext = context.downstreamContext(next)
+                val downstreamContext = DownstreamChannelContext(context, next)
                 handler.onWrite(downstreamContext, upstreamData,
                     object : OutboundPipeline {
                         override fun next(data: Any): ListenableFutureTask<Void> {
@@ -367,4 +368,65 @@ class ChannelHandlerDispatcher(
                 "onWrite", ChannelContext::class.java, Any::class.java, OutboundPipeline::class.java
             ).isAnnotationPresent(Skip::class.java)
     }
+
+    /**
+     * The flow of a normally write operation is:
+     * ```
+     *                                              │write operation
+     *                                              ▼
+     *  outboundBuffer◄────outboundHandler2◄────outboundHandler1
+     * </pre>
+     *
+     * Thing seems goes well. Every write operation will go through the whole outbound pipeline.
+     * Imagine what will happen if a write operation invoked by the `outboundHandler2`?
+     *
+     * ```
+     *
+     * ```
+     *                                                │write operation
+     *                                                ▼
+     *  outboundBuffer◄────outboundHandler2◄────outboundHandler1
+     *                             │                  ▲
+     *                             └──────────────────┘
+     *                                  write operation
+     * ```
+     * We will get an endless loop!
+     * Obviously a write operation made by a [OutboundChannelHandler] cannot backtrack, it should just go forward.
+     *
+     * ```
+     *                                                │write operation
+     *                                                ▼
+     *  outboundBuffer◄────outboundHandler2◄────outboundHandler1
+     *         ▲                  │
+     *         └──────────────────┘
+     *            write operation
+     * ```
+     *
+     * That's the reason why we need [DownstreamChannelContext]
+     */
+    class DownstreamChannelContext(val context: ChannelContext, val downstream: OutboundPipelineInvocation) :
+        ChannelContext by context {
+        override fun channel(): NioSocketChannel {
+            //重写 channel
+            return object : NioSocketChannel by context.channel() {
+                /**
+                 * 重写 write 方法, 使之将数据传给后续 handler, 而不是回到第一个, 造成死循环
+                 *
+                 * 调用 context.write 视为一次全新的写, 所以这里不沿用原 future; 这是与 OutboundPipeline#next 的区别
+                 */
+                override fun write(data: Any): ListenableFutureTask<Void> {
+                    val future = ListenableFutureTask<Void>(null) //调用 context.write 视为一次全新的写, 所以这里不沿用原 future
+                    downstream.invoke(data, future, false)
+                    return future
+                }
+
+                override fun writeAndFlush(data: Any): ListenableFutureTask<Void> { //TODO 增加重载方法 允许外界传 promise
+                    val future = ListenableFutureTask<Void>(null)
+                    downstream.invoke(data, future, true)
+                    return future
+                }
+            }
+        }
+    }
+
 }

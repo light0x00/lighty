@@ -1,5 +1,7 @@
 package io.github.light0x00.lighty.core.handler;
 
+import javax.annotation.Nonnull;
+
 /**
  * @author light0x00
  * @since 2023/7/4
@@ -8,11 +10,11 @@ public abstract class DuplexChannelHandlerAdapter extends ChannelHandlerAdapter 
 
     @Override
     @Skip
-    public void onRead(ChannelContext context, Object data, InboundPipeline pipeline) {
+    public void onRead(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull InboundPipeline pipeline) {
     }
 
     @Override
     @Skip
-    public void onWrite(ChannelContext context, Object data, OutboundPipeline pipeline) {
+    public void onWrite(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull OutboundPipeline pipeline) {
     }
 }

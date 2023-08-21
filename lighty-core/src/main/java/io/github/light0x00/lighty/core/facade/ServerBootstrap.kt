@@ -59,10 +59,7 @@ class ServerBootstrap : AbstractBootstrap<ServerBootstrap>(), Loggable {
     }
 
     companion object {
-        val Default_Initializer = object : ChannelInitializer<NioServerSocketChannel> {
-            override fun initChannel(channel: NioServerSocketChannel) {
-            }
-        }
+        val Default_Initializer = ChannelInitializer<NioServerSocketChannel> { }
     }
 
     class Server(

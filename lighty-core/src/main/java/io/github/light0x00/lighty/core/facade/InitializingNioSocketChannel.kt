@@ -80,17 +80,19 @@ class InitializingNioSocketChannel(
 
     inner class ChannelPipeline {
 
-        fun add(vararg handlers: ChannelHandler) {
+        fun add(vararg handlers: ChannelHandler): ChannelPipeline {
             for (h in handlers) {
                 handlerExecutorPairs.add(ChannelHandlerExecutorPair(h, eventExecutor))
             }
+            return this
         }
 
-        fun add(executorGroup: EventExecutorGroup<*>, vararg handlers: ChannelHandler) {
+        fun add(executorGroup: EventExecutorGroup<*>, vararg handlers: ChannelHandler): ChannelPipeline {
             val executor = executorGroup.next()
             for (h in handlers) {
                 handlerExecutorPairs.add(ChannelHandlerExecutorPair(h, executor))
             }
+            return this
         }
     }
 }

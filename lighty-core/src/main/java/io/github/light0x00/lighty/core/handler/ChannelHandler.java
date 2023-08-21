@@ -2,6 +2,8 @@ package io.github.light0x00.lighty.core.handler;
 
 import io.github.light0x00.lighty.core.util.EventLoopConfinement;
 
+import javax.annotation.Nonnull;
+
 /**
  * @author light0x00
  * @since 2023/7/1
@@ -9,25 +11,25 @@ import io.github.light0x00.lighty.core.util.EventLoopConfinement;
 @EventLoopConfinement
 public interface ChannelHandler {
 
-    void exceptionCaught(ChannelContext context, Throwable t);
+    void exceptionCaught(@Nonnull ChannelContext context, @Nonnull Throwable t);
 
-    void onInitialize(ChannelContext context);
+    void onInitialize(@Nonnull ChannelContext context);
 
-    void onDestroy(ChannelContext context);
+    void onDestroy(@Nonnull ChannelContext context);
 
     /**
      * Triggered when the 3-way handshake successful.
      */
-    void onConnected(ChannelContext context);
+    void onConnected(@Nonnull ChannelContext context);
 
     /**
      * Triggered when reach the end of input stream of current channel
      */
-    void onReadCompleted(ChannelContext context);
+    void onReadCompleted(@Nonnull ChannelContext context);
 
     /**
      * Triggered when the 4-way handshake finished.
      */
-    void onClosed(ChannelContext context);
+    void onClosed(@Nonnull ChannelContext context);
 
 }
