@@ -329,7 +329,6 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             outputBuffer.invalid(new LightyException("Channel is going to close"));
         }
         outputClosed = inputClosed = true;
-        log.debug("Channel closed: {}", javaChannel.toString());
 
         dispatcher.onClosed();
         destroy();
@@ -342,10 +341,14 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
         }
         destroyed = true;
 
+        String name = javaChannel.toString();
+
         javaChannel.close();
         key.cancel();
 
         dispatcher.onDestroy();
+
+        log.debug("Released resources associated with channel {}", name);
     }
 
     private boolean isClosed() {

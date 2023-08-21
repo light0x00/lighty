@@ -55,11 +55,11 @@ public class SingleThreadExecutor implements EventExecutor {
     /**
      * 如果调用 {@link SingleThreadExecutor#execute(Runnable)} 添加的任务,
      * 因任何原因而导致未被执行,(如队列容量上限或已经shutdown),
-     * 都将转交给 {@link io.github.light0x00.lighty.core.concurrent.RejectedExecutionHandler}
+     * 都将转交给 {@link RejectedExecutionHandler}
      */
-    private final io.github.light0x00.lighty.core.concurrent.RejectedExecutionHandler rejectedExecutionHandler;
+    private final RejectedExecutionHandler rejectedExecutionHandler;
 
-    private static final io.github.light0x00.lighty.core.concurrent.RejectedExecutionHandler DEFAULT_REJECTED_EXECUTION_HANDLER = (task, executor) -> {
+    private static final RejectedExecutionHandler DEFAULT_REJECTED_EXECUTION_HANDLER = (task, executor) -> {
         throw new RejectedExecutionException();
     };
 
@@ -73,7 +73,7 @@ public class SingleThreadExecutor implements EventExecutor {
         this(Integer.MAX_VALUE, executor);
     }
 
-    public SingleThreadExecutor(Executor executor, io.github.light0x00.lighty.core.concurrent.RejectedExecutionHandler rejectedExecutionHandler) {
+    public SingleThreadExecutor(Executor executor, RejectedExecutionHandler rejectedExecutionHandler) {
         this(Integer.MAX_VALUE, executor, rejectedExecutionHandler);
     }
 
@@ -241,7 +241,7 @@ public class SingleThreadExecutor implements EventExecutor {
             }
         }
         onCompleted();
-        log.debug("Worker stopped");
+        log.debug("Event executor terminated");
     }
 
     private void onCompleted() {

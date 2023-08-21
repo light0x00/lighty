@@ -209,7 +209,7 @@ public class NioEventLoop implements EventExecutor {
             invokeClose(handler);
         }
         selector.close();
-        log.debug("All the resources associated with event loop {} released", this);
+        log.debug("Released all the resources associated with event-loop {}", this);
 
         shutdownFuture.setSuccess();
     }

@@ -101,9 +101,9 @@ class Acceptor(
 
         javaChannel.close()
         key.cancel()
-
-        log.debug("Release resource associated with channel {}", name)
         closedFuture.setSuccess()
+
+        log.debug("Released resources associated with channel {}", name)
     }
 
 }
