@@ -37,6 +37,10 @@ public class ListenableFutureTask<T> extends FutureTask<T> {
     /**
      * For waite/notify scenarios
      */
+    public ListenableFutureTask() {
+        this(null);
+    }
+
     public ListenableFutureTask(@Nullable Executor defaultNotifier) {
         this(() -> {
         }, defaultNotifier);

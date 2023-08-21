@@ -9,6 +9,6 @@ public interface NioEventHandler {
 
     void onEvent(SelectionKey key) throws IOException;
 
-    ListenableFutureTask<Void> shutdown();
+    ListenableFutureTask<Void> onEventLoopShutdown();
 
 }

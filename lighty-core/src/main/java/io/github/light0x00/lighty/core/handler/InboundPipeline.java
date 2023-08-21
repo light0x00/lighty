@@ -1,12 +1,14 @@
 package io.github.light0x00.lighty.core.handler;
 
+import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
+
 /**
  * @author light0x00
  * @since 2023/7/4
  */
 public interface InboundPipeline {
 
-    //TODO 返回 future
-    void next(Object data);
+    ListenableFutureTask<Void> next(Object data);
 
+    ListenableFutureTask<Void> upstreamFuture();
 }

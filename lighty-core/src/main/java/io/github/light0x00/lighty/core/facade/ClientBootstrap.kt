@@ -18,6 +18,10 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
 
     private var initializer: ChannelInitializer<InitializingNioSocketChannel>? = null
 
+    companion object {
+        val defaultInitializer: ChannelInitializer<InitializingNioSocketChannel> = ChannelInitializer { }
+    }
+
     fun group(group: NioEventLoopGroup): ClientBootstrap {
         this.group = group
         return this
@@ -33,7 +37,7 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
             throw LightyException("group not set")
         }
         if (initializer == null) {
-            throw LightyException("initializer not set")
+            initializer = defaultInitializer;
         }
 
         return Client(initializer!!, group!!, buildConfiguration()).connect(address)
@@ -61,7 +65,7 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
                         configuration.bufferPool().get(),
                         connectableFuture
                     )
-                }.addListener(FutureListener() {
+                }.addListener {
                     /*
                        需注意, connect 操作 与 bind 操作的不同, 前者是需要产生网络数据包收发的, 而后者只是向操作系统申请资源
                        这决定了, 非阻塞模式下, connect 操作需要分两步:
@@ -81,7 +85,7 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
                     } else {
                         connectableFuture.setFailure(it.cause())
                     }
-                })
+                }
             return connectableFuture
         }
     }

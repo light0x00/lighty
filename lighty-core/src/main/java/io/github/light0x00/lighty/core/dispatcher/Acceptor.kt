@@ -32,7 +32,8 @@ class Acceptor(
     init {
         channel = object : NioServerSocketChannel(javaChannel) {
             override fun close(): ListenableFutureTask<Void> {
-                return this@Acceptor.shutdown()
+                eventLoop.execute { this@Acceptor.close() }
+                return closedFuture
             }
         }
 
@@ -63,8 +64,8 @@ class Acceptor(
             }
     }
 
-    override fun shutdown(): ListenableFutureTask<Void> {
-        eventLoop.execute { close() }
+    override fun onEventLoopShutdown(): ListenableFutureTask<Void> {
+        close()
         return closedFuture
     }
 

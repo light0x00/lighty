@@ -1,13 +1,11 @@
 package io.github.light0x00.lighty.core.dispatcher;
 
-import io.github.light0x00.lighty.core.facade.LightyException;
 import io.github.light0x00.lighty.core.util.EventLoopConfinement;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * @author light0x00

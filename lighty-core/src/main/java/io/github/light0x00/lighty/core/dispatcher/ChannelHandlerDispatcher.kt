@@ -18,6 +18,7 @@ import java.util.*
 @Slf4j
 class ChannelHandlerDispatcher(
     val context: ChannelContext,
+    eventExecutor: EventExecutor,
     handlerExecutorPairs: List<ChannelHandlerExecutorPair<ChannelHandler>>,
     inboundReceiver: InboundPipelineInvocation,
     outboundReceiver: OutboundPipelineInvocation
@@ -35,16 +36,16 @@ class ChannelHandlerDispatcher(
      * Triggered when the connection established successfully
      */
     @get:JvmName("connectedFuture")
-    val connectedFuture: ListenableFutureTask<Void> = ListenableFutureTask(null)
+    val connectedFuture: ListenableFutureTask<Void> = ListenableFutureTask(eventExecutor)
 
     @get:JvmName("readCompletedFuture")
-    val readCompletedFuture: ListenableFutureTask<Void> = ListenableFutureTask(null)
+    val readCompletedFuture: ListenableFutureTask<Void> = ListenableFutureTask(eventExecutor)
 
     /**
      * Triggered when the connection closed.
      */
     @get:JvmName("closedFuture")
-    val closedFuture: ListenableFutureTask<Void> = ListenableFutureTask(null)
+    val closedFuture: ListenableFutureTask<Void> = ListenableFutureTask<Void>(eventExecutor)
 
     init {
         val inboundHandlers = LinkedList<ChannelHandlerExecutorPair<InboundChannelHandler>>()
@@ -106,11 +107,10 @@ class ChannelHandlerDispatcher(
             if (executor.inEventLoop()) {
                 onConnected0(handler)
             } else {
-                executor.execute {
-                    onConnected0(handler)
-                }
+                executor.execute { onConnected0(handler) }
             }
         }
+        connectedFuture.setSuccess()
     }
 
     fun onInitialize() {
@@ -141,6 +141,7 @@ class ChannelHandlerDispatcher(
                 executor.execute { onReadCompleted0(handler) }
             }
         }
+        readCompletedFuture.setSuccess()
     }
 
     fun onClosed() {
@@ -151,14 +152,17 @@ class ChannelHandlerDispatcher(
                 executor.execute { onClosed0(context, handler) }
             }
         }
+        closedFuture.setSuccess()
     }
 
-    fun input(buf: RecyclableBuffer) {
-        inboundChain.invoke(buf)
+    fun input(buf: RecyclableBuffer): ListenableFutureTask<Void> {
+        val future = ListenableFutureTask<Void>()
+        inboundChain.invoke(buf, future)
+        return future
     }
 
     fun output(data: Any, flush: Boolean): ListenableFutureTask<Void> {
-        val writeFuture = ListenableFutureTask<Void>(null)
+        val writeFuture = ListenableFutureTask<Void>()
         outboundChain.invoke(data, writeFuture, flush)
         return writeFuture
     }
@@ -170,17 +174,29 @@ class ChannelHandlerDispatcher(
         val next: InboundPipelineInvocation
     ) :
         InboundPipelineInvocation {
-        override fun invoke(data: Any) {
+        override fun invoke(data: Any, upstreamFuture: ListenableFutureTask<Void>) {
             if (executor.inEventLoop()) {
-                invoke0(data)
+                invoke0(data, upstreamFuture)
             } else {
-                executor.execute { invoke0(data) }
+                executor.execute { invoke0(data, upstreamFuture) }
             }
         }
 
-        private fun invoke0(data: Any) {
+        private fun invoke0(data: Any, upstreamFuture: ListenableFutureTask<Void>) {
             try {
-                handler.onRead(context, data) { arg: Any -> next.invoke(arg) }
+                handler.onRead(context, data, object : InboundPipeline {
+
+                    override fun next(data: Any?): ListenableFutureTask<Void> {
+                        val future = ListenableFutureTask<Void>(null)
+                        next.invoke(data, future)
+                        return future
+                    }
+
+                    override fun upstreamFuture(): ListenableFutureTask<Void> {
+                        return upstreamFuture
+                    }
+                })
+
             } catch (t: Throwable) {
                 invokeExceptionCaught(handler, context, t)
             }
@@ -193,11 +209,11 @@ class ChannelHandlerDispatcher(
         val context: ChannelContext,
         val next: OutboundPipelineInvocation
     ) : OutboundPipelineInvocation {
-        override fun invoke(dataIn: Any, writeFuture: ListenableFutureTask<Void>, flush: Boolean) {
+        override fun invoke(dataIn: Any, upstreamFuture: ListenableFutureTask<Void>, flush: Boolean) {
             if (executor.inEventLoop()) {
-                invoke0(dataIn, writeFuture, flush)
+                invoke0(dataIn, upstreamFuture, flush)
             } else {
-                executor.execute { invoke0(dataIn, writeFuture, flush) }
+                executor.execute { invoke0(dataIn, upstreamFuture, flush) }
             }
         }
 
@@ -232,7 +248,6 @@ class ChannelHandlerDispatcher(
         } catch (throwable: Throwable) {
             invokeExceptionCaught(handler, context, throwable)
         }
-        connectedFuture.setSuccess()
     }
 
     private fun onInitialize0(observer: ChannelHandler) {
@@ -257,7 +272,6 @@ class ChannelHandlerDispatcher(
         } catch (throwable: Throwable) {
             invokeExceptionCaught(observer, context, throwable)
         }
-        readCompletedFuture.setSuccess()
     }
 
     private fun onClosed0(context: ChannelContext, observer: ChannelHandler) {
@@ -266,7 +280,6 @@ class ChannelHandlerDispatcher(
         } catch (throwable: Throwable) {
             invokeExceptionCaught(observer, context, throwable)
         }
-        closedFuture.setSuccess()
     }
 
 

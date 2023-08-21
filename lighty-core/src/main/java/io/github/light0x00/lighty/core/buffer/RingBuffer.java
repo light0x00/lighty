@@ -205,7 +205,7 @@ public class RingBuffer {
         Fragment srcFrag = src.readableFragments().first();
         Fragment dstFrag = writableFragments().first();
         int putCnt = 0;
-        for (; srcFrag != null && dstFrag != null; ) {
+        while (srcFrag != null && dstFrag != null) {
             int srcFragRemaining = srcFrag.length; //源碎片 可读数量
             int dstFragRemaining = dstFrag.length; //目的碎片 可写数量
 

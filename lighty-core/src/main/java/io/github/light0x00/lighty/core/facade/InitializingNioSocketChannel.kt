@@ -17,18 +17,24 @@ import java.util.*
  * @author light0x00
  * @since 2023/8/5
  */
-class InitializingNioSocketChannel(javaChannel: SocketChannel, private var eventExecutor: EventExecutor) :
+class InitializingNioSocketChannel(
+    javaChannel: SocketChannel, eventExecutor: EventExecutor
+) :
     ChannelHandlerConfiguration,
     AbstractNioSocketChannel(javaChannel) {
 
-    private val handlerExecutorPairs: MutableList<ChannelHandlerExecutorPair<ChannelHandler>> = LinkedList();
+    @get:JvmName("eventExecutor")
+    var eventExecutor: EventExecutor = eventExecutor
+        private set
+
+    private val handlerExecutorPairs: MutableList<ChannelHandlerExecutorPair<ChannelHandler>> = LinkedList()
 
     private val pipeline = ChannelPipeline()
 
     /**
      * The [EventExecutorGroup] for executing handlers.
      */
-    fun executorGroup(group: EventExecutorGroup<*>) {
+    fun group(group: EventExecutorGroup<*>) {
         eventExecutor = group.next()
     }
 

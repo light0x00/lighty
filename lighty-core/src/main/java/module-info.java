@@ -2,8 +2,7 @@
  * @author light0x00
  * @since 2023/8/9
  */
-@SuppressWarnings("all")
-module io.github.light0x00.lighty.core {
+module lighty.core {
     requires kotlin.stdlib;
     requires static jsr305;
     requires org.slf4j;
@@ -14,5 +13,5 @@ module io.github.light0x00.lighty.core {
     exports io.github.light0x00.lighty.core.handler;
     exports io.github.light0x00.lighty.core.concurrent;
     exports io.github.light0x00.lighty.core.facade;
-    exports io.github.light0x00.lighty.core.dispatcher to io.github.light0x00.lighty.core;
+    exports io.github.light0x00.lighty.core.dispatcher to lighty.core;
 }

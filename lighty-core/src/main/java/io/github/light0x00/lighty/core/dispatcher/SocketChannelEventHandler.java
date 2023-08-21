@@ -102,20 +102,12 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
         var channelConfiguration = new InitializingNioSocketChannel(javaChannel, eventLoop);
 
         channelInitializer.initChannel(channelConfiguration);
-
         dispatcher = new ChannelHandlerDispatcher(
                 context,
+                channelConfiguration.eventExecutor(),
                 channelConfiguration.handlerExecutorPair(),
-                (data) -> {
-                    log.warn("Discarded inbound message {} that reached at the tail of the pipeline. Please check your pipeline configuration.", data);
-                },
-                (data, future, flush) -> {
-                    if (eventLoop.inEventLoop()) {
-                        write(data, future, flush);
-                    } else {
-                        eventLoop.execute(() -> write(data, future, flush));
-                    }
-                }
+                new InboundTailInvocation(),
+                new OutboundTailInvocation()
         );
 
         dispatcher.onInitialize();
@@ -298,10 +290,10 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
     }
 
     /**
-     * 如果处于活跃状态, 则先 close 再 destroy
+     * 如果处于活跃状态(连接已经建立), 则先 close 再 destroy
      * 否则, 直接 destroy
      */
-    public ListenableFutureTask<Void> shutdown() {
+    public ListenableFutureTask<Void> onEventLoopShutdown() {
         if (eventLoop.inEventLoop()) {
             shutdown0();
             return ListenableFutureTask.successFuture();
@@ -438,6 +430,28 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
                 return bufferPool.take(capacity);
             }
         };
+    }
+
+    class InboundTailInvocation implements InboundPipelineInvocation {
+
+        @Override
+        public void invoke(Object data, ListenableFutureTask<Void> upstreamFuture) {
+            String pattern = "Discarded inbound message {} that reached at the tail of the pipeline. Please check your pipeline configuration.";
+            log.debug(pattern, data);
+            upstreamFuture.setFailure(new LightyException(pattern, data));
+        }
+    }
+
+    class OutboundTailInvocation implements OutboundPipelineInvocation {
+
+        @Override
+        public void invoke(Object data, ListenableFutureTask<Void> future, boolean flush) {
+            if (eventLoop.inEventLoop()) {
+                write(data, future, flush);
+            } else {
+                eventLoop.execute(() -> write(data, future, flush));
+            }
+        }
     }
 
 }
