@@ -103,7 +103,7 @@ public class TxtReaderServerHandler extends InboundChannelHandlerAdapter {
         File root = new File(Objects.requireNonNull(TxtReaderServerHandler.class.getClassLoader().getResource("txt"))
                 .getFile());
 
-        File[] items = Objects.requireNonNull(root).listFiles((dir, name) -> name.endsWith(".txt"));
+        File[] items = Objects.requireNonNull(root.listFiles((dir, name) -> name.endsWith(".txt")));
 
         int i = 0;
         for (File item : items) {
