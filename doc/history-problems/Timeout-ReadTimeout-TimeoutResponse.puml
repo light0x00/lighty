@@ -1,0 +1,25 @@
+@startuml
+hide footbox
+skinparam sequenceMessageAlign center
+participant 0 as "ReadTimeoutHandler"
+participant 1 as "Remote"
+
+?->0: request12
+0->(30)1:request1
+...
+...
+0->(30)1:request2
+
+
+...
+0<--? ++: timeout
+0->0 --: timeoutCount + 1
+
+
+1-->(30)0++ :response1
+0-[#Red]>0-- : <font color=red> drop response1, timeoutCount - 1
+
+1->(30)0 ++:response2
+?<[#Green]--0: <font color=green> pass response2
+
+@enduml

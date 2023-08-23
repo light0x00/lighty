@@ -1,0 +1,35 @@
+@startuml Timeout-ConnectTimeout
+title 连接超时机制实现示意图
+skinparam sequenceMessageAlign center
+
+actor 0 as "user code"
+participant 1 as "Bootstrap"
+participant 2 as "EventLoop"
+participant 3 as "Selector"
+
+0->1++ : connect
+1->1 : SocketChannel.open
+1->2-- : register
+...
+2->2++: next event-loop cycle
+
+2->3: register
+2-->1--++: register success
+
+1->1 : SocketChannel.connect
+1->2--: <font color=blue>execute delay task 5000 milliseconds</font>
+
+alt if success before 5000 milliseconds
+
+3-->2 : connectable
+2-->1++: notify connect success
+1-->0--: <font color=green>connect success
+
+else if not yet success after 5000 milliseconds
+... <font color=blue>5000 milliseconds later ...
+2->2++: <font color=blue>delay task triggered
+2-->1--++: <font color=blue>callback
+1->1 : SocketChannel.close
+1-->0 --: <font color=red>connect timeout 
+end
+@enduml

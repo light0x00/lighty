@@ -1,0 +1,12 @@
+@startuml
+hide footbox
+participant 0 as "A"
+participant 1 as "B"
+
+0->(10)1 :request1
+0->(10)1 :request2
+1->(10)0 :response1
+0->(10)1 :request3
+1->(10)0 :response2
+1->(10)0 :response3
+@enduml

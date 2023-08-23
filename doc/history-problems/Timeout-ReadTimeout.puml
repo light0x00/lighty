@@ -1,0 +1,73 @@
+@startuml Timeout-ReadTimeout
+skinparam sequenceMessageAlign center
+
+participant 0 as "MessageHandler"
+participant 1 as "Encoder"
+participant 2 as "ReadTimeoutHandler"
+participant 5 as "Decoder"
+participant 3 as "EventHandler"
+participant 4 as "EventLoop"
+
+' 发出请求
+
+0->1++: pass request
+1->1: encode as bytes
+1->2--++: pass bytes
+2->3--: pass bytes
+...
+3<--?++: writable event
+3->?: write bytes to socket
+3-->2--++: notify write bytes success
+2->2: mark { request : <font color=orange>notReply</font> }   
+
+2->4--: <font color=blue>execute delay task 5000 milliseconds later
+
+
+' 分支1, 超时前到来响应
+alt <font color=blue>get replied before the delay task expire</font>
+
+3<--?++ : readable event
+3->3: read bytes from socket 
+3-->5--++ : pass bytes
+5->5: decode as message 
+5->2--++: pass response 
+2->2: mark { request : <font color=green> replied</font> }
+2->0-- : pass response 
+...
+
+' 延迟任务触发
+4->4++: delay task triggered
+4-->2--++: callback
+2->2--: check request status(<font color=green>replied</font>)
+note over 2 #LightGreen: request get replied, so everything is ok
+
+' else 分支, 超时后到来的响应
+else <font color=red>not yet get replied when the delay task expire</font>
+
+4->4++: delay task triggered
+4-->2--++: callback
+2->2: check request status(<font color=orange>notReply</font>)
+note over 2 #LightPink: request not yet get replied, so pass a ReadTimeoutException
+2-->1++: <font color=red>pass ReadTimeoutException
+2->2--: timeoutCount++
+1-->0--: <font color=red>pass ReadTimeoutException
+
+...
+
+' 迟到的消息到来
+3<--?++ : readable event
+3->3: read bytes from socket 
+3->5--++ : pass bytes
+5->5: decode as message 
+5->2--++: pass response 
+2->2: check timeoutCount>0
+note over 2#LightPink 
+cuz timeoutCount>0==true, 
+so we know it's a timeout response,
+then drop it. 
+end note
+2->2: drop response, timeoutCount -- 
+
+end
+
+@enduml
