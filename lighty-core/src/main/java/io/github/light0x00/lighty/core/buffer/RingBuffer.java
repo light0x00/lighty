@@ -270,12 +270,34 @@ public class RingBuffer {
 
     public int getInt() {
         byte[] bytes = new byte[4];
+        if (remainingCanGet() < 4) {
+            throw new BufferUnderflowException();
+        }
         get(bytes);
         return Tool.bytesToInt(bytes);
     }
 
     public RingBuffer putInt(int value) {
+        if (remainingCanPut() < 4) {
+            throw new BufferOverflowException();
+        }
         return put(Tool.intToBytes(value));
+    }
+
+    public long getLong() {
+        byte[] bytes = new byte[8];
+        if (remainingCanGet() < 8) {
+            throw new BufferUnderflowException();
+        }
+        get(bytes);
+        return Tool.bytesToLong(bytes);
+    }
+
+    public RingBuffer putLong(long value) {
+        if (remainingCanPut() < 8) {
+            throw new BufferOverflowException();
+        }
+        return put(Tool.longToBytes(value));
     }
 
     public int remainingCanGet() {
