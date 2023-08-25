@@ -9,5 +9,5 @@ module lighty.examples {
     requires lighty.codec;
     requires static lombok;
     requires ch.qos.logback.classic;
-
+    requires org.java_websocket;
 }

@@ -11,13 +11,15 @@
     <modules>
         <module>lighty-core</module>
         <module>examples</module>
+        <module>lighty-codec</module>
+        <module>lighty-all</module>
     </modules>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.8.10</kotlin.version>
+        <kotlin.version>1.8.20-RC</kotlin.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
     </properties>
 
@@ -61,6 +63,16 @@
                 <artifactId>lighty-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>io.github.light0x00</groupId>
+                <artifactId>lighty-codec</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.light0x00</groupId>
+                <artifactId>lighty-all</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -96,7 +108,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.4.6</version>
+            <version>1.4.7</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

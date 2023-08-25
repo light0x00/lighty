@@ -15,11 +15,10 @@ import java.nio.file.Paths;
  * @since 2023/8/5
  */
 @Slf4j
-public class ZeroCopyServerSide {
+public class ZeroCopyServer {
 
     public static void main(String[] args) {
         Path filePath = getFilepath(args);
-
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("server"));
         new ServerBootstrap()
                 .group(eventLoopGroup)

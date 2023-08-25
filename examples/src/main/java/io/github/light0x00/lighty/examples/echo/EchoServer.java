@@ -34,16 +34,16 @@ public class EchoServer {
                     }
                 })
                 //5. Bind an address
-                .bind(new InetSocketAddress(9000))
+                .bind(new InetSocketAddress(9000));
                 //6. Blocking util the binding action finished.
-                .sync();
+//                .sync();
     }
 
     static class EchoHandler extends InboundChannelHandlerAdapter {
         @Override
         public void onRead(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull InboundPipeline pipeline) {
-            context.channel().write(data);  //1.
-            context.channel().flush(); //2.
+            context.write(data);  //1.
+            context.flush(); //2.
         }
     }
 }

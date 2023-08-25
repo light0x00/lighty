@@ -26,7 +26,11 @@ class FileSender extends ChannelHandlerAdapter {
     @Override
     public void onConnected(@Nonnull ChannelContext context) {
         long timeBegin = System.currentTimeMillis();
-        context.transfer(FileChannel.open(filePath, StandardOpenOption.READ))
+        //1.
+        FileChannel fileChannel = FileChannel.open(filePath, StandardOpenOption.READ);
+        //2.
+        context.transfer(fileChannel)
+                //3.
                 .addListener(future -> {
                     log.info("File send result: {}", future.isSuccess());
                     if (future.isSuccess()) {
@@ -36,6 +40,7 @@ class FileSender extends ChannelHandlerAdapter {
                         future.cause().printStackTrace();
                     }
                 });
+        //4.
         context.flush();
     }
 }
