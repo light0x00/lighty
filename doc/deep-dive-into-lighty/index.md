@@ -23,10 +23,10 @@ new connection   ┌────────────────────
                                                           └───────────────┘
 ```
 
-连接被分配给 `EventLoop` 后, I/O 事件由 `EventHandler` 处理. 对于输入性事件(如 `readable` ), socket receive buffer 的数据被读出后, 会转交给用户的 `InboundPipeline` 中的 `ChannelHandler` 处理 ; 而对于输出性事件(`writeable`), 用户代码调用 `write`,`flush` 写入后, 数据会经过 `OutboundPipeline` 最后聚集到 `EventHandler` 所维护的 `OutputBuffer` , 在之后某个时刻发生的 `writable` 事件中将这些数据实际写入 socket send buffer.
+连接被分配给 `EventLoop` 后, I/O 事件由 `EventHandler` 处理. 对于输入性事件(如 `readable` ), socket receive buffer 的数据被读出后, 会转交给用户的 `InboundPipeline` 中的 `ChannelHandler` 处理 ; 而对于输出性事件(`writeable`), 用户代码调用 `write`,`flush` 写入数据后, 数据会经过 `OutboundPipeline` 最后聚集到 `EventHandler` 所维护的 `OutputBuffer` , 在之后某个时刻发生的 `writable` 事件中将这些数据实际写入 socket send buffer.
 
 ```txt
-EventLoop                    EventHandler                                    inbound pipeline(A set of ChannelHandler s
+                            EventHandler                                    inbound pipeline(A set of ChannelHandler s
 
 ┌────────────┐              ┌────────────┐              ┌─────────────────────────────────────────────────────────────┐
 │            │   readable   │┌─────────┐ │  input data  │ ┌──────────┬──────────┬─────────┬─────────────┬───────────┐ │
@@ -35,7 +35,7 @@ EventLoop                    EventHandler                                    inb
 │            │              │            │              └─────────────────────────────────────────────────────────────┘
 │            │              │            │
 │            │              │ event      │                                           │
-│ event loop │              │ hanlder    │                                           │ write
+│  Channel   │              │ hanlder    │                                           │ write
 │            │              │            │                                           ▼
 │            │              │            │              ┌─────────────────────────────────────────────────────────────┐
 │            │  writeable   │┌──────────┐│ output data  │ ┌──────────┬────────────┬─────────┬───────────┬───────────┐ │
