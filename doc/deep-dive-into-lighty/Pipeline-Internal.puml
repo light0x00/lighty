@@ -1,0 +1,31 @@
+@startuml
+
+actor 0 as "user code"
+participant 1 as "ChannelHandlerDispatcher"
+participant 2 as "OutboundPipelineInvocation"
+participant 3 as "ChannelHandler"
+participant 4 as "OutboundPipeline"
+participant 5 as "OutboundReceiver"
+participant 6 as "OutputBuffer"
+
+group Pipeline 启动
+
+0->0 : write message
+0->1 : output
+end
+
+group 执行当前 Pipeline 环节 [Pipeline 中的每个 ChannelHandler 都会增加中间环节数 ]
+1->2 : invoke
+2->3 : onWrite
+end
+
+group 转移到下一个 Pipeline 环节
+3->4 : next
+end
+
+group Pipeline 收尾
+4->5 : invoke
+
+5->6 : write
+end
+@enduml

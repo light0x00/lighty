@@ -1,5 +1,5 @@
 if [ ! -n "$1" ] ;then
-    echo "Do not specify release version!"
+    echo "Not yet specify release version!"
     exit 1;
 fi;
 

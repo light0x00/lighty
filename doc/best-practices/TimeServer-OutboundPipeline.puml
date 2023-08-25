@@ -1,0 +1,14 @@
+@startuml
+skinparam sequenceMessageAlign center
+
+participant 0 as "TimeServerHandler"
+participant 1 as "TimeEncoder"
+
+[-->0++ : connected event
+0->0 : writeAndFlush
+0->1--++ : invoke
+1->]-- : writeAndFlush
+...
+1<--]++ : write success
+1-->0-- : notify write success
+@enduml

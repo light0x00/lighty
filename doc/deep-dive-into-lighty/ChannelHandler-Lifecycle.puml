@@ -1,0 +1,17 @@
+@startuml
+title ChannelHandler 的生命周期
+hide empty description
+
+start
+:onInitialize;
+:TCP 3-Way-Handshake;
+if () then(success)
+:onConnected;
+:onRead/onWrite;
+:TCP 4-Way-Handshake;
+else(failure)
+endif
+:onDestroy;
+
+stop
+@enduml

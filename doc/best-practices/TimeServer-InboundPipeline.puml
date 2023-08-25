@@ -1,0 +1,9 @@
+@startuml
+participant 0 as "TimeDecoder"
+participant 1 as "TimeClientHandler"
+
+[-->0++ : readable event
+0->0 : decode as Date object
+0->1--++ : pass Date object
+1->1--: print Date object
+@enduml

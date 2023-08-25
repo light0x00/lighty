@@ -1,0 +1,47 @@
+@startuml
+participant 0 as "EventHandler"
+participant 1 as "ChannelHandler1"
+participant 2 as "ChannelHandler2"
+
+loop
+
+[--> 0: readable
+activate 0
+0->0: read bytes from socket
+0->1: pass bytes to pipeline
+deactivate 0
+
+activate 1
+
+1->1: accumulate bytes
+end
+
+1->1: decode bytes as message
+1->2: pass message
+deactivate 1
+
+
+activate 2
+2->2: handle message
+2->1: write message
+deactivate 2
+
+activate 1
+1->1: encode message as bytes
+1->0: pass bytes
+deactivate 1
+
+activate 0
+0->0: bytes pending to write
+deactivate 0
+
+loop
+
+[--> 0: writable
+activate 0
+0->0: write pending bytes to socket
+deactivate 0
+
+end
+
+@enduml

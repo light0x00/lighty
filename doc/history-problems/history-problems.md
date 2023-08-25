@@ -12,6 +12,36 @@
 
 对于一个 channel 的读写、编码解码、报文处理,每一个阶段都可以指定不同的 `Executor` 执行, 但是对于每一个阶段,每次执行,执行线程应该总是不变. 这样可以避免线程安全问题.
 
+## 预防用户代码意外关闭 channel
+
+如下图, 在写数据到 socket send buffer 的过程中, 每写一个都会触发一次对用户代码的通知, 如果用户代码中将 channel close, 那么会导致 `OutputBuffer` 中的其他数据写入一个已关闭的 channel, 导致异常.
+解决这一问题,  因此 `ChannelContext.close()` 内部, 应该在下一个事件循环去关闭底层 channel, 而不是当前. 
+
+```plantuml
+@startuml
+title Demo
+participant A as "EventLoop"
+participant B as "EventHandler"
+participant C as "ListenableFutureTask"
+participant D as "FutureListener"
+participant E as "ChannelContext"
+
+A->B : onEvent
+
+'if(OutputBuffer.isNotEmpty()){
+B->B : poll data from queue
+B->E : write
+B->C : setSuccess
+C->D : notify
+D->E !!: close
+
+B->B : poll data from queue
+B->x? : write
+note over B : here will go a ChannelClosedException
+
+@enduml
+```
+
 ## OutboundPipeline write操作 死循环问题
 
 见 ChannelContext#nextContext
@@ -256,45 +286,16 @@ handler (`DefaultChannelPipeline`), 其实现是打印一行 warn 日志(`Defaul
 在同一个连接上发出的多次请求, 一定是先发出的请求先收到响应的, 只需要预先在发出请求时就维护请求顺序, 那么在收到响应时就可以对应起来.
 
 ```plantuml
-hide footbox
-participant 0 as "A"
-participant 1 as "B"
-
-0->(10)1 :request1
-0->(10)1 :request2
-1->(10)0 :response1
-0->(10)1 :request3
-1->(10)0 :response2
-1->(10)0 :response3
+!include Timeout-ReadTimeout-RequestResponseMapping.puml
 ```
 
 **问题 2**, 如何处理“姗姗来迟”的响应?
 
 可以维护一个计数值 `timeoutCount`, 当延迟任务里检测到响应超时, 那么就意味着接下来会有一个响应一定是 ”姗姗来迟“ 的(或者一直不来), 这时 `timeoutCount += 1`, 当之后的某个时间点(也可以是无期限)这个响应来了, 那么丢弃掉.
 
+
 ```plantuml
-hide footbox
-skinparam sequenceMessageAlign center
-participant 0 as "ReadTimeoutHandler"
-participant 1 as "Remote"
-
-?->0: request12
-0->(30)1:request1
-...
-...
-0->(30)1:request2
-
-
-...
-0<--? ++: timeout
-0->0 --: timeoutCount + 1
-
-
-1-->(30)0++ :response1
-0-[#Red]>0-- : <font color=red> drop response1, timeoutCount - 1
-
-1->(30)0 ++:response2
-?<[#Green]--0: <font color=green> pass response2
+!include Timeout-ReadTimeout-TimeoutResponse.puml
 ```
 
 ### 实现方案

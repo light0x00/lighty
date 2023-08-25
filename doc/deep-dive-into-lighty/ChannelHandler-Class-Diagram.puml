@@ -1,0 +1,33 @@
+@startuml
+hide empty members
+title ChannelHandler 的接口定义
+
+interface ChannelHandler{
+exceptionCaught(ChannelContext context, Throwable t);
+
+onInitialize(ChannelContext context);
+
+onDestroy(ChannelContext context);
+
+onConnected(ChannelContext context);
+
+onReadCompleted(ChannelContext context);
+
+onClosed(ChannelContext context);
+}
+
+interface InboundChannelHandler{
+ onRead(ChannelContext context, Object data, InboundPipeline next);
+}
+
+interface OutboundChannelHandler{
+ onWrite(ChannelContext context, Object data, OutboundPipeline next);
+}
+
+interface DuplexChannelHandler extends InboundChannelHandler,OutboundChannelHandler{
+
+}
+
+ChannelHandler<|--InboundChannelHandler
+ChannelHandler<|--OutboundChannelHandler
+@enduml

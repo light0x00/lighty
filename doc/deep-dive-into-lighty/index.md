@@ -1,26 +1,6 @@
-- 整体流程(基于流程图介绍)
-- event loop 设计
-  - 线程池改造
-    - lock free技巧,如 shutdown、execute
-  - event loop group 负载均衡
-  - listenable future task 异步化
+中文 | [English](./index.en.md)
 
-- ChannelHandler 设计
-  - 责任链、观察者、写缓冲队列
-  - 生命周期
-  - OutboundPipeline 中执行 write操作, 如何避免死循环问题.
-- 缓存池设计
-  - LRU
-  - release 机制(读写锁解决并发问题)
-- RingBuffer
-- 边界情况处理
-  - 连接关闭,半开连接(一方关闭)
-
----
-
-<p align="center">
-    <img src="logo.png" alt="Lighty">
-</p>
+# 深入理解 Lighty
 
 ## 整体架构
 
@@ -68,41 +48,12 @@ EventLoop                    EventHandler                                    inb
 
 ## ChannelHandler
 
-```plantuml
-@startuml
-hide empty members
-title ChannelHandler 的接口定义
+用户通过 `ChannelHandler` 实现应用层逻辑. 根据用途的不同, 可分类为 
+- `InboundChannelHandler`, 用于处理输入事件, 构成入方向 pipeline. 
+- `OutboundChannelHandler`, 用于处理输出动作, 构成出方向 pipeline.
+- `DuplexChannelHandler`, 同时处理输入/输出, 分别构成输入 pipeline,输出 pipeline.
 
-interface ChannelHandler{
-exceptionCaught(ChannelContext context, Throwable t);
-
-onInitialize(ChannelContext context);
-
-onDestroy(ChannelContext context);
-
-onConnected(ChannelContext context);
-
-onReadCompleted(ChannelContext context);
-
-onClosed(ChannelContext context);
-}
-
-interface InboundChannelHandler{
- onRead(ChannelContext context, Object data, InboundPipeline next);
-}
-
-interface OutboundChannelHandler{
- onWrite(ChannelContext context, Object data, OutboundPipeline next);
-}
-
-interface DuplexChannelHandler extends InboundChannelHandler,OutboundChannelHandler{
-
-}
-
-ChannelHandler<|--InboundChannelHandler
-ChannelHandler<|--OutboundChannelHandler
-@enduml
-```
+![](./ChannelHandler-Class-Diagram.svg)
 
 - onInitialize, `ChannelHandler` 实例初始化后触发
 - onConnected, 成功建立连接后触发(3-way-handshake 成功)
@@ -111,25 +62,7 @@ ChannelHandler<|--OutboundChannelHandler
 - onDestroy,`ChannelHandler` 被销毁时执行
 - exceptionCaught, 异常捕获, 生命周期方法出现异常时执行
 
-```plantuml
-@startuml
-title Channelhandler 的生命周期
-hide empty description
-
-start
-:onInitialize;
-:TCP 3-Way-Handshake;
-if () then(success)
-:onConnected;
-:onRead/onWrite;
-:TCP 4-Way-Handshake;
-else(failure)
-endif
-:onDestroy;
-
-stop
-@enduml
-```
+![](./ChannelHandler-Lifecycle.svg)
 
 ## Pipeline
 
@@ -148,55 +81,11 @@ stop
 - `ChannelHandler2` 接收到报文后, 执行 compute 动作, 然后输出(写入)结果
 - `ChannelHandler1` 将输出结果编码后, 传递给 `EventHandler`
 
-```plantuml
-@startuml
-participant 0 as "EventHandler"
-participant 1 as "ChannelHandler1"
-participant 2 as "ChannelHandler2"
+![](./Pipeline-Basic.svg)
 
-loop
+pipeline 的内部调用流程
 
-[--> 0: readable
-activate 0
-0->0: read bytes from socket
-0->1: pass bytes to pipeline
-deactivate 0
-
-activate 1
-
-1->1: accumulate bytes
-end
-
-1->1: decode bytes as message
-1->2: pass message
-deactivate 1
-
-
-activate 2
-2->2: handle message
-2->1: write message
-deactivate 2
-
-activate 1
-1->1: encode message as bytes
-1->0: pass bytes
-deactivate 1
-
-activate 0
-0->0: bytes pending to write
-deactivate 0
-
-loop
-
-[--> 0: writable
-activate 0
-0->0: write pending bytes to socket
-deactivate 0
-
-end
-
-@enduml
-```
+![](./Pipeline-Internal.svg)
 
 ## 线程模型
 
@@ -205,16 +94,6 @@ end
 下图展示了 Lighty 中的核心组件, `EventLoop`,`EventHandler`,`ChannelHandler` 的的执行线程, 其中 `ChannelHandler` 的执行线程是用户可配置的.
 
 情况1, 如下图, pipeline 中所有 `ChannelHandler` 都运行在 event-loop 线程中
-
-```plantuml
-@startuml
-node EventLoop as 0
-node EventHandler as 1
-0->1
-
-
-@enduml
-```
 
 ```txt
                                run in an event-loop thread
@@ -268,10 +147,12 @@ new ChannelInitializer<>() {
 
 在 Lighty 中, 一切可能阻塞的动作都是异步的
 
-- write
-- connect
-- bind
-- close\shutdownInput\shutdownOutput
+- bind, 监听一个 address
+- connect, 连接一个 adress
+- write, 写入数据到 socekt
+- close\shutdownInput\shutdownOutput, 关闭 Socket
+
+异步方法需要在实际执行完任务之后, 触发回调, 并传递回调结果. Lighty 中使用 `ListenableFutureTask` 来完成这一任务.
 
 ## RingBuffer
 
@@ -283,7 +164,7 @@ Lighty 采用双指针的 `RingBuffer`, 解决了这一痛点.
     readPosition 		writePosition   
           │              │
   ┌───────▼──────────────▼──────────┐
-  │ free  │  unread      │   free		│
+  │ free  │  unread      │   free   │
   └───────┴──────────────┴──────────┘
 ```
 
@@ -321,70 +202,6 @@ void put(ByteBuffer);
 
 如下图, 树的每个节点代表一种“容量”, 使用一个链表存储容量为该值的 `ByteBuffer`, 当需要某种容量的 `ByteBuffer` 时, 比如要申请容量为 700 bytes 的 `ByteBuffer`, 那么从树中查找 >=700 bytes 的最小节点, 下图的例子中, 容量为 768 的节点会被命中, 最终从该节点的链表中取出 `ByteBuffer` 复用.
 
-```plantuml
-@startuml
-hide empty description
-title BufferPool 数据结构示意图
-
-state 1 as "capacity:512" { 
-    state 1_1 as "512bytes" 
-    state 1_2 as "512bytes"
-    1_1->1_2 
-}
-state 2 as "capacity:256"{
- state 2_1 as "256 bytes"
- state 2_2 as "256 bytes"
- 2_1->2_2
-}
-state 3 as "capacity:1024"{
- state 3_1 as "1024 bytes"
- state 3_2 as "1024 bytes"
- state 3_3 as "1024 bytes"
- 3_1->3_2
- 3_2->3_3
-}
-
-state 4 as "capacity:768"{
- state 4_1 as "768 bytes"
-}
-
-state 5 as "capacity:2048"{
- state 5_1 as "2048 bytes"
- state 5_2 as "2048 bytes"
-
- 5_1->5_2
-}
-
-3-->5
-
-
-1-->2
-1-->3
-3-->4
-
-@enduml
-```
+![](./BufferPool-DataStructure.svg)
 
 除此之外, 缓存池是有界的, 因此需要实现淘汰机制, 保留更常用的 `ByteBuffer`, 丢弃不常用的. “更常用”的可以有很多种解释, 比如 LRU 优先保留“最近使用”的, LFU 优先保留“使用总次数最多+最近使用”, LRU Letty 中选择了 LRU.
-
-## 零拷贝(放到最佳实践文档中)
-
-在 Lighty 中, 可以轻松实现“文件分发场景”的零拷贝, 直接传入已经 open 的文件句柄即可.
-
-```java
-class FileSender extends ChannelHandlerAdapter {
-
-    @Override
-    public void onConnected(ChannelContext context) {
-        //1. open 文件
-        FileChannel fileChannel = FileChannel.open("path/to/file", StandardOpenOption.READ);
-    		//2. 将文件写入
-        context.channel()
-                .write(fileChannel)
-								//3. 监听写入结果
-                .addListener(future -> {
-                  	log.info("File send result: {}",future.isSuccess());
-                });
-    }
-}
-```

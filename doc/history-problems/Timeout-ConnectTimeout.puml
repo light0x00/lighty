@@ -1,5 +1,4 @@
 @startuml Timeout-ConnectTimeout
-title 连接超时机制实现示意图
 skinparam sequenceMessageAlign center
 
 actor 0 as "user code"

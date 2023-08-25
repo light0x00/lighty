@@ -24,7 +24,7 @@ participant 4 as "EventLoop"
 
 
 ' 分支1, 超时前到来响应
-alt <font color=blue>get replied before the delay task expire</font>
+alt #LightBlue get replied before the delay task expire
 
 3<--?++ : readable event
 3->3: read bytes from socket 
@@ -38,15 +38,15 @@ alt <font color=blue>get replied before the delay task expire</font>
 ' 延迟任务触发
 4->4++: delay task triggered
 4-->2--++: callback
-2->2--: check request status(<font color=green>replied</font>)
+2->2--: check request status(replied)
 note over 2 #LightGreen: request get replied, so everything is ok
 
 ' else 分支, 超时后到来的响应
-else <font color=red>not yet get replied when the delay task expire</font>
+else #LightPink not yet get replied when the delay task expire
 
 4->4++: delay task triggered
 4-->2--++: callback
-2->2: check request status(<font color=orange>notReply</font>)
+2->2: check request status(notReply)
 note over 2 #LightPink: request not yet get replied, so pass a ReadTimeoutException
 2-->1++: <font color=red>pass ReadTimeoutException
 2->2--: timeoutCount++

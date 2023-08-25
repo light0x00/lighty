@@ -35,3 +35,38 @@
 - [x] 入方向 pipeline 返回 future
 - [x] 零拷贝不经过 outbound pipeline
 - [ ] StringDecoder MalformedInputException、UnmappableCharacterException 问题, 考虑这种情况是否应该替换为错误字符
+- [ ] 实现连接超时、读超时, 研究下 netty 的实现
+  1. `ReadTimeoutHandler` 实现原理 
+  2. `ChannelOption.CONNECT_TIMEOUT_MILLIS` 在服务端和客户端的实现原理 
+       ```java
+           new Bootstrap()
+                     .group(groupA)
+                     .channel(LocalChannel.class)
+                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                     .attr(key, "value")
+                     .handler(new ChannelInitializer<LocalChannel>() {
+                         @Override
+                         protected void initChannel(LocalChannel ch) throws Exception {
+                             Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                             assertEquals(4242, (int) option);
+                             assertEquals("value", ch.attr(key).get());
+                         }
+                     })
+                     .bind(LocalAddress.ANY).sync();
+  
+             ServerBootstrap sb = new ServerBootstrap()
+                     .group(group)
+                     .channel(LocalServerChannel.class)
+                     .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                     .childAttr(key, "value")
+                     .childHandler(new ChannelInitializer<LocalChannel>() {
+                         @Override
+                         protected void initChannel(LocalChannel ch) throws Exception {
+                             Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                             assertEquals(4242, (int) option);
+                             assertEquals("value", ch.attr(key).get());
+                             requestServed.set(true);
+                         }
+                     });
+       ```
+    
