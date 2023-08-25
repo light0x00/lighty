@@ -48,7 +48,7 @@ class ClientBootstrap : AbstractBootstrap<ClientBootstrap>() {
         private var configuration: LightyConfiguration
     ) {
 
-        fun connect(address: SocketAddress?): ListenableFutureTask<NioSocketChannel> {
+        fun connect(address: SocketAddress): ListenableFutureTask<NioSocketChannel> {
             val channel = SocketChannel.open()
             channel.configureBlocking(false)
             val connectableFuture = ListenableFutureTask<NioSocketChannel>(null)

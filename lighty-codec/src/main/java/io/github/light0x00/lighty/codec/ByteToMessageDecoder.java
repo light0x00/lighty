@@ -54,8 +54,8 @@ public abstract class ByteToMessageDecoder extends InboundChannelHandlerAdapter 
      * A point need to aware is that the accumulated bytes are not necessary to reach the number specified.
      * In other words, the bytes passed to this method, may not be full.
      *
-     * @param bytes the bytes accumulated
+     * @param buffer the bytes accumulated
      */
-    protected abstract void decode(ChannelContext context, RingBuffer bytes, InboundPipeline pipeline);
+    protected abstract void decode(ChannelContext context, RingBuffer buffer, InboundPipeline pipeline);
 
 }

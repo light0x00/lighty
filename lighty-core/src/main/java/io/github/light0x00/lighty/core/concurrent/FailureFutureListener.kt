@@ -11,7 +11,7 @@ class FailureFutureListener<T>(private val onFailure: Consumer<Throwable>) : Fut
     companion object {
         @JvmStatic
         fun <T> printStackTrace(): FailureFutureListener<T> {
-            return FailureFutureListener<T> { it.printStackTrace() }
+            return FailureFutureListener { it.printStackTrace() }
         }
     }
 
