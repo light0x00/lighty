@@ -427,10 +427,6 @@ class ChannelHandlerDispatcher(
             return future
         }
 
-        override fun channel(): NioSocketChannel {
-            return object : NioSocketChannel by this {}
-        }
-
         override fun writeAndFlush(data: Any): ListenableFutureTask<Void> { //TODO 增加重载方法 允许外界传 promise
             val future = ListenableFutureTask<Void>(null)
             downstream.invoke(data, future, true)

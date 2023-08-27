@@ -10,9 +10,6 @@ class ChannelContextImpl(
 ) :
     ChannelContext,
     NioSocketChannel by channel {
-    override fun channel(): NioSocketChannel {
-        return channel
-    }
 
     override fun allocateBuffer(capacity: Int): ByteBuf {
         return bufferPool.take(capacity)
