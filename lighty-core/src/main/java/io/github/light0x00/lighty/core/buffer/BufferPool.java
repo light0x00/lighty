@@ -6,7 +6,7 @@ package io.github.light0x00.lighty.core.buffer;
  */
 public abstract class BufferPool {
 
-    public abstract RecyclableBuffer take(int capacity);
+    public abstract ByteBuf take(int capacity);
 
-    protected abstract void recycle(RecyclableBuffer buffer);
+    protected abstract void recycle(ByteBuf buffer);
 }

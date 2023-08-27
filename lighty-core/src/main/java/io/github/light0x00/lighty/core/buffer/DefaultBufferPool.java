@@ -37,13 +37,13 @@ public class DefaultBufferPool extends BufferPool {
     }
 
     @Override
-    public RecyclableBuffer take(int capacity) {
+    public ByteBuf take(int capacity) {
         ByteBuffer buf = take0(capacity);
-        return new RecyclableBuffer(this, buf, 0, capacity);
+        return new ByteBuf(this, buf, 0, capacity);
     }
 
     @Override
-    public void recycle(RecyclableBuffer buffer) {
+    public void recycle(ByteBuf buffer) {
         recycle0(buffer.backingBuffer);
     }
 

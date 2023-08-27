@@ -10,17 +10,17 @@ import java.nio.channels.ScatteringByteChannel;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
-public class RecyclableBuffer extends RingBuffer implements Closeable {
+public class ByteBuf extends RingBuffer implements Closeable {
 
-    private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
-    private ReentrantReadWriteLock.ReadLock readLock = rwLock.readLock();
-    private ReentrantReadWriteLock.WriteLock writeLock = rwLock.writeLock();
+    private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock.ReadLock readLock = rwLock.readLock();
+    private final ReentrantReadWriteLock.WriteLock writeLock = rwLock.writeLock();
 
     BufferPool pool;
     volatile boolean hasReleased = false;
     final ByteBuffer backingBuffer;
 
-    public RecyclableBuffer(BufferPool pool, ByteBuffer originalBuffer, int offset, int length) {
+    public ByteBuf(BufferPool pool, ByteBuffer originalBuffer, int offset, int length) {
         super(offset == 0 && length == originalBuffer.capacity() ? originalBuffer : originalBuffer.slice(offset, length));
         this.pool = pool;
         this.backingBuffer = originalBuffer;
@@ -98,7 +98,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer get(byte[] dst) {
+    public ByteBuf get(byte[] dst) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -110,7 +110,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer get(byte[] dst, int offset, int length) {
+    public ByteBuf get(byte[] dst, int offset, int length) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -122,7 +122,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer put(byte value) {
+    public ByteBuf put(byte value) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -134,7 +134,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer put(byte[] src) {
+    public ByteBuf put(byte[] src) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -146,7 +146,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer put(byte[] src, int offset, int length) {
+    public ByteBuf put(byte[] src, int offset, int length) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -158,7 +158,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer put(ByteBuffer src) {
+    public ByteBuf put(ByteBuffer src) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -170,7 +170,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer put(ByteBuffer src, int length) {
+    public ByteBuf put(ByteBuffer src, int length) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -182,7 +182,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer put(ByteBuffer src, int offset, int length) {
+    public ByteBuf put(ByteBuffer src, int offset, int length) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -194,7 +194,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer put(RingBuffer src) {
+    public ByteBuf put(RingBuffer src) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -206,7 +206,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer put(RingBuffer src, int length) {
+    public ByteBuf put(RingBuffer src, int length) {
         try {
             readLock.lock();
             ensureNotReleased();
@@ -251,7 +251,7 @@ public class RecyclableBuffer extends RingBuffer implements Closeable {
     }
 
     @Override
-    public RecyclableBuffer putInt(int value) {
+    public ByteBuf putInt(int value) {
         try {
             readLock.lock();
             ensureNotReleased();

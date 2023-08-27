@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.core.handler
 
-import io.github.light0x00.lighty.core.buffer.RecyclableBuffer
+import io.github.light0x00.lighty.core.buffer.ByteBuf
 import io.github.light0x00.lighty.core.facade.NioSocketChannel
 
 /**
@@ -9,7 +9,7 @@ import io.github.light0x00.lighty.core.facade.NioSocketChannel
  */
 interface ChannelContext : NioSocketChannel {
 
-    fun allocateBuffer(capacity: Int): RecyclableBuffer
+    fun allocateBuffer(capacity: Int): ByteBuf
 
     fun channel(): NioSocketChannel
 

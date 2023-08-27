@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.core.dispatcher
 
-import io.github.light0x00.lighty.core.buffer.RecyclableBuffer
+import io.github.light0x00.lighty.core.buffer.ByteBuf
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask
 import io.github.light0x00.lighty.core.eventloop.EventExecutor
 import io.github.light0x00.lighty.core.facade.NioSocketChannel
@@ -157,7 +157,7 @@ class ChannelHandlerDispatcher(
         closedFuture.setSuccess()
     }
 
-    fun input(buf: RecyclableBuffer): ListenableFutureTask<Void> {
+    fun input(buf: ByteBuf): ListenableFutureTask<Void> {
         val future = ListenableFutureTask<Void>()
         inboundChain.invoke(buf, future)
         return future

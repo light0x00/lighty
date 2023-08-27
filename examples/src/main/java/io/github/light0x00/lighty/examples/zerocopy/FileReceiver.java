@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.examples.zerocopy;
 
-import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
+import io.github.light0x00.lighty.core.buffer.ByteBuf;
 import io.github.light0x00.lighty.core.handler.InboundChannelHandlerAdapter;
 import io.github.light0x00.lighty.core.handler.InboundPipeline;
 import io.github.light0x00.lighty.core.handler.ChannelContext;
@@ -45,7 +45,7 @@ class FileReceiver extends InboundChannelHandlerAdapter {
     @SneakyThrows
     @Override
     public void onRead(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull InboundPipeline pipeline) {
-        try (RecyclableBuffer buffer = (RecyclableBuffer) data) {
+        try (ByteBuf buffer = (ByteBuf) data) {
             while (buffer.remainingCanGet() > 0) {
                 int n = buffer.writeToChannel(fileChannel);
                 log.info("Received: {} bytes", n);

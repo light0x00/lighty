@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.codec;
 
-import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
+import io.github.light0x00.lighty.core.buffer.ByteBuf;
 import io.github.light0x00.lighty.core.handler.InboundChannelHandlerAdapter;
 import io.github.light0x00.lighty.core.handler.InboundPipeline;
 import io.github.light0x00.lighty.core.handler.ChannelContext;
@@ -22,7 +22,7 @@ public class StringDecoder extends InboundChannelHandlerAdapter {
 
     @Override
     public void onRead(@Nonnull ChannelContext context, @Nonnull Object data, @Nonnull InboundPipeline pipeline) {
-        try (var buf = (RecyclableBuffer) data) {
+        try (var buf = (ByteBuf) data) {
             String str = decoder.decode(buf.readableSlices());
             if (str.isEmpty()) {
                 return;

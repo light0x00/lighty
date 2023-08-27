@@ -55,7 +55,7 @@ public class LruBufferPool extends BufferPool {
     }
 
     @Override
-    public RecyclableBuffer take(int acquireCapacity) {
+    public ByteBuf take(int acquireCapacity) {
         ByteBuffer byteBuffer = takeAtLeast(acquireCapacity)
                 .map((buf) -> {
                     log.debug("Reuse buffer: {} bytes", buf.capacity());
@@ -65,7 +65,7 @@ public class LruBufferPool extends BufferPool {
                     log.debug("Allocate buffer: {} bytes", acquireCapacity);
                     return bufferAllocator.allocate(acquireCapacity);
                 });
-        return new RecyclableBuffer(this, byteBuffer, 0, acquireCapacity);
+        return new ByteBuf(this, byteBuffer, 0, acquireCapacity);
     }
 
     private Optional<ByteBuffer> takeAtLeast(int capacityAtLeast) {
@@ -106,7 +106,7 @@ public class LruBufferPool extends BufferPool {
     }
 
     @Override
-    protected void recycle(RecyclableBuffer recyclable) {
+    protected void recycle(ByteBuf recyclable) {
         if (!recyclable.hasReleased && !recyclable.markReleased()) {
             return;
         }

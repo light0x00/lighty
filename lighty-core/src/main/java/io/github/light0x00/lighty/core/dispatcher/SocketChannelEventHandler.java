@@ -1,7 +1,7 @@
 package io.github.light0x00.lighty.core.dispatcher;
 
 import io.github.light0x00.lighty.core.buffer.BufferPool;
-import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
+import io.github.light0x00.lighty.core.buffer.ByteBuf;
 import io.github.light0x00.lighty.core.buffer.RingBuffer;
 import io.github.light0x00.lighty.core.concurrent.ListenableFutureTask;
 import io.github.light0x00.lighty.core.concurrent.SuccessFutureListener;
@@ -131,7 +131,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
     private void processReadableEvent() throws IOException {
         int n;
         while (true) {
-            RecyclableBuffer buf = bufferPool.take(lettyProperties.readBufSize());
+            ByteBuf buf = bufferPool.take(lettyProperties.readBufSize());
             n = buf.readFromChannel(javaChannel);
             if (n > 0)
                 dispatcher.input(buf);
@@ -225,7 +225,7 @@ public abstract class SocketChannelEventHandler implements NioEventHandler {
             key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         } else {
             writeFuture.setSuccess();
-            if (writer.getSource() instanceof RecyclableBuffer recyclable) {
+            if (writer.getSource() instanceof ByteBuf recyclable) {
                 recyclable.release();
             }
         }
