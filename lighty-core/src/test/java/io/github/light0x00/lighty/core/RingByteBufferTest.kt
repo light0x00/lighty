@@ -139,7 +139,6 @@ class RingByteBufferTest {
             )
         }
 
-
         /*
           ┌───┬───┬───┬───┐
           │   │R/W│   │   │
@@ -270,7 +269,7 @@ class RingByteBufferTest {
         assertState(dst, 3, 2, 3, 1)
 
         //检查内容是否正确
-        var bytes = ByteArray(3)
+        val bytes = ByteArray(3)
         dst.get(bytes)
         Assertions.assertArrayEquals(byteArrayOf(2, 4, 6), bytes)
 
