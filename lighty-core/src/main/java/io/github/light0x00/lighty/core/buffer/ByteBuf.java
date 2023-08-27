@@ -7,10 +7,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
-public class ByteBuf extends RingBuffer implements Closeable {
+public class ByteBuf implements RingBuffer, Closeable {
 
     private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
     private final ReentrantReadWriteLock.ReadLock readLock = rwLock.readLock();
@@ -20,8 +21,11 @@ public class ByteBuf extends RingBuffer implements Closeable {
     volatile boolean hasReleased = false;
     final ByteBuffer backingBuffer;
 
+    RingBufferImpl ringBuffer;
+
     public ByteBuf(BufferPool pool, ByteBuffer originalBuffer, int offset, int length) {
-        super(offset == 0 && length == originalBuffer.capacity() ? originalBuffer : originalBuffer.slice(offset, length));
+        ringBuffer = new RingBufferImpl(
+                offset == 0 && length == originalBuffer.capacity() ? originalBuffer : originalBuffer.slice(offset, length));
         this.pool = pool;
         this.backingBuffer = originalBuffer;
     }
@@ -33,7 +37,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
     }
 
     /**
-     * Mark as released, return true only for the first thread‘s invocation.
+     * Mark as released, return true only for the first thread's invocation.
      */
     boolean markReleased() {
         try {
@@ -58,7 +62,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return super.writePosition();
+            return ringBuffer.writePosition();
         } finally {
             readLock.unlock();
         }
@@ -69,7 +73,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return super.readPosition();
+            return ringBuffer.readPosition();
         } finally {
             readLock.unlock();
         }
@@ -80,7 +84,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return super.capacity();
+            return ringBuffer.capacity();
         } finally {
             readLock.unlock();
         }
@@ -91,7 +95,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return super.get();
+            return ringBuffer.get();
         } finally {
             readLock.unlock();
         }
@@ -102,7 +106,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.get(dst);
+            ringBuffer.get(dst);
             return this;
         } finally {
             readLock.unlock();
@@ -114,7 +118,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.get(dst, offset, length);
+            ringBuffer.get(dst, offset, length);
             return this;
         } finally {
             readLock.unlock();
@@ -126,7 +130,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.put(value);
+            ringBuffer.put(value);
             return this;
         } finally {
             readLock.unlock();
@@ -138,7 +142,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.put(src);
+            ringBuffer.put(src);
             return this;
         } finally {
             readLock.unlock();
@@ -150,7 +154,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.put(src, offset, length);
+            ringBuffer.put(src, offset, length);
             return this;
         } finally {
             readLock.unlock();
@@ -162,7 +166,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.put(src);
+            ringBuffer.put(src);
             return this;
         } finally {
             readLock.unlock();
@@ -174,7 +178,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.put(src, length);
+            ringBuffer.put(src, length);
             return this;
         } finally {
             readLock.unlock();
@@ -186,7 +190,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.put(src, offset, length);
+            ringBuffer.put(src, offset, length);
             return this;
         } finally {
             readLock.unlock();
@@ -198,7 +202,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.put(src);
+            ringBuffer.put(src);
             return this;
         } finally {
             readLock.unlock();
@@ -210,7 +214,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.put(src, length);
+            ringBuffer.put(src, length);
             return this;
         } finally {
             readLock.unlock();
@@ -222,7 +226,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return super.readFromChannel(channel);
+            return ringBuffer.readFromChannel(channel);
         } finally {
             readLock.unlock();
         }
@@ -233,7 +237,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return super.writeToChannel(channel);
+            return ringBuffer.writeToChannel(channel);
         } finally {
             readLock.unlock();
         }
@@ -244,7 +248,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return super.getInt();
+            return ringBuffer.getInt();
         } finally {
             readLock.unlock();
         }
@@ -255,8 +259,64 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.putInt(value);
+            ringBuffer.putInt(value);
             return this;
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    @Override
+    public long getLong() {
+        try {
+            readLock.lock();
+            ensureNotReleased();
+            return ringBuffer.getLong();
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    @Override
+    public ByteBuf putLong(long value) {
+        try {
+            readLock.lock();
+            ensureNotReleased();
+            ringBuffer.putLong(value);
+            return this;
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    @Override
+    public ByteBuffer[] readableSlices() {
+        try {
+            readLock.lock();
+            ensureNotReleased();
+            return ringBuffer.readableSlices();
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    @Override
+    public void moveReadPosition(int step) {
+        try {
+            readLock.lock();
+            ensureNotReleased();
+            ringBuffer.moveReadPosition(step);
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    @Override
+    public void moveWritePosition(int step) {
+        try {
+            readLock.lock();
+            ensureNotReleased();
+            ringBuffer.moveWritePosition(step);
         } finally {
             readLock.unlock();
         }
@@ -267,7 +327,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return super.remainingCanGet();
+            return ringBuffer.remainingCanGet();
         } finally {
             readLock.unlock();
         }
@@ -278,7 +338,18 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return super.remainingCanPut();
+            return ringBuffer.remainingCanPut();
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    @Override
+    public String getString(Charset charset) {
+        try {
+            readLock.lock();
+            ensureNotReleased();
+            return ringBuffer.getString(charset);
         } finally {
             readLock.unlock();
         }
@@ -289,7 +360,7 @@ public class ByteBuf extends RingBuffer implements Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            super.clear();
+            ringBuffer.clear();
         } finally {
             readLock.unlock();
         }

@@ -1,6 +1,7 @@
 package io.github.light0x00.lighty.core
 
 import io.github.light0x00.lighty.core.buffer.RingBuffer
+import io.github.light0x00.lighty.core.buffer.RingBufferImpl
 import io.github.light0x00.lighty.core.util.Tool
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -22,7 +23,7 @@ class RingByteBufferTest {
         buf.put(3)
         buf.flip()
 
-        val rBuf = RingBuffer(
+        val rBuf = RingBufferImpl(
             buf,
             buf.position(),
             buf.limit(),
@@ -30,7 +31,7 @@ class RingByteBufferTest {
             false
         )
         for (i in 1..3) {
-            Assertions.assertEquals(i.toByte(), rBuf.get());
+            Assertions.assertEquals(i.toByte(), rBuf.get())
         }
         Assertions.assertThrows(BufferUnderflowException::class.java) {
             rBuf.get()
@@ -46,12 +47,12 @@ class RingByteBufferTest {
         buf.put(4)
         buf.flip()
 
-        val rBuf = RingBuffer(buf, 3, 1, 4, false)
+        val rBuf = RingBufferImpl(buf, 3, 1, 4, false)
 
         Assertions.assertEquals(2, rBuf.remainingCanGet())
 
-        Assertions.assertEquals(4, rBuf.get());
-        Assertions.assertEquals(1, rBuf.get());
+        Assertions.assertEquals(4, rBuf.get())
+        Assertions.assertEquals(1, rBuf.get())
         Assertions.assertThrows(BufferUnderflowException::class.java) {
             rBuf.get()
         }
@@ -59,7 +60,7 @@ class RingByteBufferTest {
 
     @Test
     fun testGetWhatPut() {
-        val buf = RingBuffer(ByteBuffer.allocate(4))
+        val buf = RingBufferImpl(ByteBuffer.allocate(4))
         buf.put(1.toByte())
         buf.put(3.toByte())
         buf.put(5.toByte())
@@ -70,7 +71,7 @@ class RingByteBufferTest {
 
     @Test
     fun testGetWhatPut2() {
-        val buf = RingBuffer(ByteBuffer.allocate(4))
+        val buf = RingBufferImpl(ByteBuffer.allocate(4))
         val cp = "😅".codePoints().findFirst().asInt
         println(Character.toString(cp))
         buf.put(Tool.intToBytes(cp))
@@ -84,7 +85,7 @@ class RingByteBufferTest {
 
     @Test
     fun testPutOverflow() {
-        val buf = RingBuffer(ByteBuffer.allocate(4))
+        val buf = RingBufferImpl(ByteBuffer.allocate(4))
         Assertions.assertThrows(
             BufferOverflowException::class.java
         ) { buf.put(byteArrayOf(0, 1, 2, 3, 4)) }
@@ -92,7 +93,7 @@ class RingByteBufferTest {
 
     @Test
     fun testGetUnderflow() {
-        val buf = RingBuffer(ByteBuffer.allocate(4))
+        val buf = RingBufferImpl(ByteBuffer.allocate(4))
         buf.put(byteArrayOf(1, 2))
         Assertions.assertThrows(BufferUnderflowException::class.java) {
             buf.get(ByteArray(3))
@@ -104,7 +105,7 @@ class RingByteBufferTest {
      */
     @Test
     fun testPutAndGetAlternately() {
-        val buf = RingBuffer(ByteBuffer.allocate(4))
+        val buf = RingBufferImpl(ByteBuffer.allocate(4))
         /*
          ┌───┬───┬───┬───┐
          │ R │   │ W │   │
@@ -153,7 +154,7 @@ class RingByteBufferTest {
 
     @Test
     fun testPutAndGetAlternately2() {
-        val buf = RingBuffer(ByteBuffer.allocate(4))
+        val buf = RingBufferImpl(ByteBuffer.allocate(4))
         /*
          ┌───┬───┬───┬───┐
          │ R │   │ W │   │
@@ -194,7 +195,7 @@ class RingByteBufferTest {
          └───┴───┴───┴───┘
          */
         val readBytes = ByteArray(4)
-        buf[readBytes]
+        buf.get(readBytes)
         Assertions.assertArrayEquals(byteArrayOf(2, 3, 4, 5), readBytes)
         Assertions.assertEquals(0, buf.remainingCanGet())
         Assertions.assertEquals(4, buf.remainingCanPut())
@@ -205,8 +206,8 @@ class RingByteBufferTest {
      */
     @Test
     fun testPutRingByteBuffer1() {
-        val dst = RingBuffer(ByteBuffer.allocate(4))
-        val src = RingBuffer(ByteBuffer.allocate(4))
+        val dst = RingBufferImpl(ByteBuffer.allocate(4))
+        val src = RingBufferImpl(ByteBuffer.allocate(4))
 
         dst.put(byteArrayOf(1, 3, 5))
         dst.get(ByteArray(3)) //r=3,w=3,unread=0
@@ -227,8 +228,8 @@ class RingByteBufferTest {
      */
     @Test
     fun testPutRingByteBuffer2() {
-        val src = RingBuffer(ByteBuffer.allocate(4))
-        val dst = RingBuffer(ByteBuffer.allocate(4))
+        val src = RingBufferImpl(ByteBuffer.allocate(4))
+        val dst = RingBufferImpl(ByteBuffer.allocate(4))
 
         src.put(byteArrayOf(1, 3, 5)) //src: r=0,w=3,unread=3
         src.get(ByteArray(3)) //src: r=3,w=3,unread=0
@@ -249,8 +250,8 @@ class RingByteBufferTest {
      */
     @Test
     fun testPutRingByteBuffer3() {
-        val src = RingBuffer(ByteBuffer.allocate(4))
-        val dst = RingBuffer(ByteBuffer.allocate(4))
+        val src = RingBufferImpl(ByteBuffer.allocate(4))
+        val dst = RingBufferImpl(ByteBuffer.allocate(4))
 
         src.put(byteArrayOf(1, 3, 5)) //buf1: r=0,w=3,unread=3
         src.get(ByteArray(3)) //buf1: r=3,w=3,unread=0
@@ -261,7 +262,7 @@ class RingByteBufferTest {
 
         //测试前
         //src 的两个可读碎片分别为:  [3~3],[0~1]
-        //dst 为一个可写碎片: [3~3],[0~2]
+        //dst 为两个可写碎片: [3~3],[0~2]
 
         dst.put(src)
 
