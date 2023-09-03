@@ -78,7 +78,7 @@ class HelloWorldHandler extends InboundChannelHandlerAdapter { //1.
 4. 回复 `Hello World`.
 5. 发送完成后, 关闭 channel.
 
-接下来, 我们要实现 layer 2, 幸运地是 Lighty 中内置了对文本的编码/解码器, 因此只需要将其加入 Pipeline 即可.
+接下来, 我们要实现 layer 2, 幸运的是 Lighty 中内置了对文本的编码/解码器, 因此只需要将其加入 Pipeline 即可.
 
 ```java
 public class HelloWorldServer {

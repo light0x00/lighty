@@ -9,21 +9,15 @@
         <version>0.0.1</version>
     </parent>
 
-    <artifactId>examples</artifactId>
-
+    <artifactId>lighty-codec-http</artifactId>
     <dependencies>
         <dependency>
             <groupId>io.github.light0x00</groupId>
-            <artifactId>lighty-all</artifactId>
+            <artifactId>lighty-core</artifactId>
         </dependency>
         <dependency>
             <groupId>io.github.light0x00</groupId>
-            <artifactId>lighty-codec-http</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.java-websocket</groupId>
-            <artifactId>Java-WebSocket</artifactId>
-            <version>1.5.4</version>
+            <artifactId>lighty-codec</artifactId>
         </dependency>
     </dependencies>
 

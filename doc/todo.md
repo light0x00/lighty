@@ -35,6 +35,8 @@
 - [x] 入方向 pipeline 返回 future
 - [x] 零拷贝不经过 outbound pipeline
 - [ ] StringDecoder MalformedInputException、UnmappableCharacterException 问题, 考虑这种情况是否应该替换为错误字符
+- [ ] 将 EventLoop、BufferPool 存到 ThreadLocal, `ListenableFutureTask` notifier 默认使用当前 EventLoop 
+- [ ] 支持设置 backlog 
 - [ ] 实现连接超时、读超时, 研究下 netty 的实现
   1. `ReadTimeoutHandler` 实现原理 
   2. `ChannelOption.CONNECT_TIMEOUT_MILLIS` 在服务端和客户端的实现原理 

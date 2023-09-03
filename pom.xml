@@ -13,6 +13,7 @@
         <module>examples</module>
         <module>lighty-codec</module>
         <module>lighty-all</module>
+        <module>lighty-codec-http</module>
     </modules>
 
     <properties>
@@ -66,6 +67,11 @@
             <dependency>
                 <groupId>io.github.light0x00</groupId>
                 <artifactId>lighty-codec</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.light0x00</groupId>
+                <artifactId>lighty-codec-http</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
