@@ -87,7 +87,7 @@ public class TxtReaderServerHandler extends InboundChannelHandlerAdapter {
     private void processCommand(@Nonnull ChannelContext context, String command) {
         if ("q".equals(command)) {
             context.writeAndFlush("Bye!")
-                    .addListener(future -> context.channel().close());
+                    .addListener(future -> context.close());
         } else if ("h".equals(command)) {
             sendMenu(context);
         } else {

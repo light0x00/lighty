@@ -35,7 +35,7 @@ class FileSender extends ChannelHandlerAdapter {
                     log.info("File send result: {}", future.isSuccess());
                     if (future.isSuccess()) {
                         log.info("File sending completed! time elapsed: {}ms", System.currentTimeMillis() - timeBegin);
-                        context.channel().close();
+                        context.close();
                     } else {
                         future.cause().printStackTrace();
                     }

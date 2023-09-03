@@ -1,6 +1,6 @@
 package io.github.light0x00.lighty.examples.time;
 
-import io.github.light0x00.lighty.core.buffer.RecyclableBuffer;
+import io.github.light0x00.lighty.core.buffer.ByteBuf;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup;
 import io.github.light0x00.lighty.core.facade.ServerBootstrap;
 import io.github.light0x00.lighty.core.handler.ChannelContext;
@@ -45,7 +45,7 @@ public class TimeServer {
             var date = (Date) data;
 
             //2.
-            RecyclableBuffer buf = context.allocateBuffer(8);
+            ByteBuf buf = context.allocateBuffer(8);
             buf.putLong(date.getTime());
 
             //3.
