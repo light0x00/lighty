@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import javax.annotation.Nonnull;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
@@ -27,6 +29,7 @@ public class HttpMessageDecoder extends InboundMessageHandler<ByteBuf> {
     int contentLength;
 
     ByteArrayOutputStream bodyBufferStream = new ByteArrayOutputStream(64);
+    WritableByteChannel bodyBufferChannel = Channels.newChannel(bodyBufferStream);
 
     static final Charset charset = StandardCharsets.ISO_8859_1;
 
@@ -115,55 +118,59 @@ public class HttpMessageDecoder extends InboundMessageHandler<ByteBuf> {
         } else {
             //解析 header
             int delimiterIdx = line.indexOf(":");
+
             if (delimiterIdx <= 0) {
                 throw new MalformedHttpMessage("Invalid header");
             }
             String name = line.substring(0, delimiterIdx);
             String value = line.substring(delimiterIdx + 1);
-            request.headers().put(name.toLowerCase(), value);
+            request.headers().put(name.toLowerCase(), value.trim());
         }
     }
 
+    @SneakyThrows
     private void parseBody(@Nonnull ByteBuf data, @Nonnull InboundPipeline pipeline) {
         if (contentLength < 0) {
             throw new MalformedHttpMessage("Unknown Content-Length");
-        } else if (contentLength == 0) {
-            return;
         }
+        if (contentLength > 0)
+            for (ByteBuffer slice : data.readableSlices()) {
+                int bytesWritten = Math.min(contentLength - bodyBufferStream.size(), slice.remaining());
 
-        for (ByteBuffer slice : data.readableSlices()) {
-            int bytesWritten = Math.min(contentLength - bodyBufferStream.size(), slice.remaining());
-            bodyBufferStream.write(slice.array(), 0, bytesWritten);
-            data.moveReadPosition(bytesWritten);
+                bodyBufferChannel.write(slice.slice(0, bytesWritten));
+                data.moveReadPosition(bytesWritten);
 
-            if (bodyBufferStream.size() == contentLength) {
-                request.body(bodyBufferStream.toByteArray()); //todo 考虑复用问题
-                pipeline.next(request);
-                state = State.Wait_Start_Line;
-                bodyBufferStream.reset();
-                contentLength = -1;
-                break;
+                if (bodyBufferStream.size() == contentLength) {
+                    break;
+                }
             }
-        }
+
+        request.body(bodyBufferStream.toByteArray()); //todo 考虑复用问题
+        pipeline.next(request);
+
+        contentLength = -1;
+        state = State.Wait_Start_Line;
+        bodyBufferStream.reset();
     }
 
     ByteArrayOutputStream lineBufferStream = new ByteArrayOutputStream(64);
 
     private String readLine(@Nonnull ByteBuf data) {
-        boolean crlf = false;
-        for (ByteBuffer buf : data.readableSlices()) {
-            while (buf.remaining() > 0) {
-                byte b = buf.get();
-                data.moveReadPosition(1);
-                if (b == '\r') {
-                    crlf = true;
-                } else if (crlf && b == '\n') {
-                    String line = lineBufferStream.toString(charset);
-                    lineBufferStream.reset();
-                    return line;
-                } else {
-                    lineBufferStream.write(b);
+        boolean waitLF = false;
+
+        while (data.remainingCanGet() > 0) {
+            byte b = data.get();
+            if (b == HttpConstants.CR) {
+                waitLF = true;
+            } else if (b == '\n') {
+                String line = lineBufferStream.toString(charset);
+                lineBufferStream.reset();
+                return line;
+            } else {
+                if (waitLF) {
+                    throw new MalformedHttpMessage("LF expected.");
                 }
+                lineBufferStream.write(b);
             }
         }
         return null;

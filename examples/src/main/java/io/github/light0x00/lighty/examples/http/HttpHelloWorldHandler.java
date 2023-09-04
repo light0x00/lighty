@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
  * @author light0x00
  * @since 2023/9/2
  */
-public class HelloWorldHandler extends InboundMessageHandler<HttpRequest> {
+public class HttpHelloWorldHandler extends InboundMessageHandler<HttpRequest> {
 
     @Override
     protected void handleInput(@Nonnull ChannelContext context, @Nonnull HttpRequest message, @Nonnull InboundPipeline pipeline) {

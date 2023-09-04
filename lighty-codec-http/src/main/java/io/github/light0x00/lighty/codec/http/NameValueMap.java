@@ -8,8 +8,8 @@ import java.util.HashMap;
  */
 public class NameValueMap extends HashMap<String, String> {
 
-    public Integer getInt(String name) {
+    public int getInt(String name, int def) {
         String s = get(name);
-        return s == null ? null : Integer.valueOf(s);
+        return s == null ? def : Integer.parseInt(s);
     }
 }

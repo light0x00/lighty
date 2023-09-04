@@ -23,7 +23,7 @@ public class HttpHelloWorldServer {
                             .add(
                                     new HttpMessageDecoder(),
                                     new HttpMessageEncoder(),
-                                    new HelloWorldHandler()
+                                    new HttpHelloWorldHandler()
                             );
                 })
                 .bind(new InetSocketAddress(9000));
