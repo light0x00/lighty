@@ -84,7 +84,6 @@ public class RingBufferImpl implements RingBuffer {
             throw new BufferUnderflowException();
         }
         byte b = buffer.get(readPosition);
-        --bytesUnRead;
         moveReadPosition(1);
         return b;
     }
@@ -129,7 +128,6 @@ public class RingBufferImpl implements RingBuffer {
             throw new BufferOverflowException();
         }
         buffer.put(writePosition, value);
-        ++bytesUnRead;
         moveWritePosition(1);
         return this;
     }

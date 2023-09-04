@@ -294,7 +294,7 @@ public class ByteBuf implements RingBuffer, Closeable {
         try {
             readLock.lock();
             ensureNotReleased();
-            return ringBuffer.readableSlices();
+             return ringBuffer.readableSlices();
         } finally {
             readLock.unlock();
         }
