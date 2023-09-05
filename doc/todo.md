@@ -19,7 +19,7 @@
 - [x] 将生命周期的几个 future 移入 ChannelEventNotifier 类, 然后用用户的 executor 去执行, 而不是 event loop 线程
 - [x] 调研 当 ServerSocketChannel close 后, 其 accept 的 SocketChannel 以及 SelectionKey 的状态,
   考虑是否需要释放资源 [issue0001]
-- [x] 支持文件分发场景的零拷贝, 调试 `FileChannel.transferTo` 源码  [here!!!]
+- [x] 支持文件分发场景的零拷贝, 调试 `FileChannel.transferTo` 源码
 - [x] 考虑 nio event loop 中, catch 到异常, 是否需要执行相关 handler 的释放资源操作
 - [ ] 每当 channel 读事件发生, 要分配内存装载就绪的数据时, 对缓冲区大小的动态统计和预测能力.
     - 比如一开始每次分配 1kb 的读缓冲区, 但是每次都需要分几次才能读完 channel, 那么意味着缓冲区分配小了, 下一次应该分配更大的缓冲区.
@@ -37,38 +37,8 @@
 - [ ] StringDecoder MalformedInputException、UnmappableCharacterException 问题, 考虑这种情况是否应该替换为错误字符
 - [ ] 将 EventLoop、BufferPool 存到 ThreadLocal, `ListenableFutureTask` notifier 默认使用当前 EventLoop 
 - [ ] 支持设置 backlog 
+- [ ] 实现链式 RingBuffer
+- [ ] EventLoop 访问级别的资源放在 ThreadLocal, 如 BufferPool 
 - [ ] 实现连接超时、读超时, 研究下 netty 的实现
   1. `ReadTimeoutHandler` 实现原理 
-  2. `ChannelOption.CONNECT_TIMEOUT_MILLIS` 在服务端和客户端的实现原理 
-       ```java
-           new Bootstrap()
-                     .group(groupA)
-                     .channel(LocalChannel.class)
-                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
-                     .attr(key, "value")
-                     .handler(new ChannelInitializer<LocalChannel>() {
-                         @Override
-                         protected void initChannel(LocalChannel ch) throws Exception {
-                             Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
-                             assertEquals(4242, (int) option);
-                             assertEquals("value", ch.attr(key).get());
-                         }
-                     })
-                     .bind(LocalAddress.ANY).sync();
-  
-             ServerBootstrap sb = new ServerBootstrap()
-                     .group(group)
-                     .channel(LocalServerChannel.class)
-                     .childOption(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
-                     .childAttr(key, "value")
-                     .childHandler(new ChannelInitializer<LocalChannel>() {
-                         @Override
-                         protected void initChannel(LocalChannel ch) throws Exception {
-                             Integer option = ch.config().getOption(ChannelOption.CONNECT_TIMEOUT_MILLIS);
-                             assertEquals(4242, (int) option);
-                             assertEquals("value", ch.attr(key).get());
-                             requestServed.set(true);
-                         }
-                     });
-       ```
-    
+  2. `ChannelOption.CONNECT_TIMEOUT_MILLIS` 在服务端和客户端的实现原理
