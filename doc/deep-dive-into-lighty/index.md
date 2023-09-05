@@ -152,7 +152,7 @@ new ChannelInitializer<>() {
 - write, 写入数据到 socekt
 - close\shutdownInput\shutdownOutput, 关闭 Socket
 
-异步方法需要在实际执行完任务之后, 触发回调, 并传递回调结果. Lighty 中使用 `ListenableFutureTask` 来完成这一任务.
+异步方法需要在实际执行完任务之后, 触发回调, 并传递回调结果. Lighty 中使用 `ListenableFutureTask` 来完成这一任务, 异步任务的结果通过线程间回调返回.
 
 ## RingBuffer
 

@@ -20,11 +20,6 @@
             <groupId>io.github.light0x00</groupId>
             <artifactId>lighty-codec-http</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.java-websocket</groupId>
-            <artifactId>Java-WebSocket</artifactId>
-            <version>1.5.4</version>
-        </dependency>
     </dependencies>
 
 </project>

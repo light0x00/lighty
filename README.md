@@ -34,6 +34,10 @@ Lighty 基于 Multiple Reactors 模式实现, 并具有如下特性:
 </dependency>
 ```
 
+```
+requires lighty.core
+```
+
 我们将编写一个 Hello World 服务, 它会打印接收到的消息, 并回复 `"Hello World"`.
 
 如果以自顶向下的方式解决这个问题, 那么我们可以先实现上层处理逻辑, 在这个层面我们处理的是 `String`类型 的输入/输出. 而底层, 则是编码/解码层.

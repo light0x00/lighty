@@ -4,11 +4,10 @@
  */
 module lighty.examples {
     requires static jsr305;
+    requires ch.qos.logback.classic;
+    requires static lombok;
     requires org.slf4j;
     requires lighty.core;
     requires lighty.codec;
-    requires static lombok;
-    requires ch.qos.logback.classic;
-    requires org.java_websocket;
     requires lighty.codec.http;
 }
