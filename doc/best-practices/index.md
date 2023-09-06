@@ -282,6 +282,70 @@ public class ZeroCopyServer {
 }
 ```
 
+## 实现一个简单的 HTTP
+
+Lighty 中实现了 HTTP 的报文编码解码, 因此很容易地实现一个「hello world」级别的 HTTP server.
+
+引入 `lighty-codec-http`.
+
+```xml
+<dependency>
+   <groupId>io.github.light0x00</groupId>
+   <artifactId>lighty-codec-http</artifactId>
+   <version>...</version>
+</dependency>
+```
+编写一个返回 "Hello World" 的 Handler.
+
+```java
+public class HttpHelloWorldHandler extends InboundMessageHandler<HttpRequest> {
+
+    @Override
+    protected void handleInput(@Nonnull ChannelContext context, @Nonnull HttpRequest message, @Nonnull InboundPipeline pipeline) {
+        byte[] payload = "Hello World".getBytes(StandardCharsets.US_ASCII);
+
+        var httpResponse = new HttpResponse();
+        httpResponse.status(ResponseStatus.OK);
+        httpResponse.version("HTTP/1.1");
+        httpResponse.headers().put("content-type", "text/plain");
+        httpResponse.headers().put("content-length", String.valueOf(payload.length));
+        httpResponse.body(payload);
+
+        context.writeAndFlush(httpResponse);
+    }
+}
+```
+
+在 Pipeline 中加入 `HttpMessageDecoder`,`HttpMessageEncoder`, 以及我们编写的 `HttpHelloWorldHandler`.
+
+```java
+public class HttpHelloWorldServer {
+
+   public static void main(String[] args) {
+      NioEventLoopGroup group = new NioEventLoopGroup(1);
+
+      new ServerBootstrap()
+              .group(group)
+              .childInitializer(channel -> {
+                 channel.pipeline()
+                         .add(
+                                 new HttpMessageDecoder(),
+                                 new HttpMessageEncoder(),
+                                 new HttpHelloWorldHandler()
+                         );
+              })
+              .bind(new InetSocketAddress(9000));
+   }
+}
+```
+
+启动后, 使用 curl 或浏览器访问, 将会得到 "Hello World".
+
+```bash
+ $ curl localhost:9000
+Hello World
+```
+
 ## 关于缓冲区
 
 Lighty 中对缓冲区进行了复用. 
@@ -322,3 +386,7 @@ public class DemoHandler extends InboundChannelHandlerAdapter {
 ## 正确地关闭服务
 
 关闭服务只需要简单地调用 `EventExecutorGroup.shutdown()` 即可, 需要注意 Lighty 中默认为优雅关闭, 且不提供强制关闭的方式(不接受暴力美学). 关闭事件循环组, 会等待内部每个事件循环将剩余任务处理完. 
+
+## 最后
+
+如果想获得更多可以查看 [examples](../../examples)

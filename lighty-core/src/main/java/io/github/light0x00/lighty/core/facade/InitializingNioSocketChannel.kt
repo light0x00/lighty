@@ -12,7 +12,7 @@ import java.util.*
 /**
  * The functionality of this channel decorator is limited.
  * Usually due to the underlying channel has not been fully constructed.
- * eg: The tha channel may be registered to a selector but not yet connected.
+ * eg: The channel may be registered to a selector but not yet connected.
  * So that the read/write functionality is not available.
  *
  * @author light0x00

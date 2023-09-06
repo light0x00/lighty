@@ -34,9 +34,7 @@ Lighty 基于 Multiple Reactors 模式实现, 并具有如下特性:
 </dependency>
 ```
 
-```
-requires lighty.core
-```
+> 确保 jdk 版本 >= 17, 如果使用模块化,那么需要引入模块 `lighty.core`、`lighty.codec`
 
 我们将编写一个 Hello World 服务, 它会打印接收到的消息, 并回复 `"Hello World"`.
 
@@ -106,7 +104,7 @@ public class HelloWorldServer {
 }
 ```
 
-1. 创建一个事件循环组, 指定线程数为 1, 这意味着我们用 1 个 Reactor 来负责处理所有 channel 的事件
+1. 创建一个事件循环组, 指定线程数为 1, 这意味着我们用 1 个 Reactor 来负责处理所有 channel 的事件.
 2. 创建一个 Server.
 3. 指定事件循环组.
 4. 配置 Pipeline, 并指定字符串编码/解码器.
@@ -118,6 +116,6 @@ public class HelloWorldServer {
 
 如果你想了解更多 Lighty 的使用案例, 可以阅读 [Lighty 最佳实践](./doc/best-practices/index.md).
 
-如果你想了解关于 Lighty 的内部设计, 可以阅读 [深入理解 Lighty](doc/deep-dive-into-lighty/index.md) .
+如果你想了解关于 Lighty 的内部设计, 可以阅读 [深入理解 Lighty](https://github.com/light0x00/light0x00/blob/main/thinking-in-tech/deep-dive-into-lighty/index.md) .
 
 如果你对网络框架很感兴趣, 也可以加入 [Slack 讨论群组](https://join.slack.com/t/slack-o6y6551/shared_invite/zt-222eavevn-P75aH~I88F6Tq_g4gfQLmQ)

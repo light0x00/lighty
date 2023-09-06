@@ -12,7 +12,7 @@
 
 Lighty is an elegant, event-driven, asynchronous network framework. The pursuit of **elegance** in the **internal structure** and **user interface** is the first essence of Lighty's design. With Lighty, you'll feel its minimalism, logical consistency, sense of boundaries, and spirituality, rather than the disquieting mechanical feel that pervades many popular technologies.
 
-Its original design inspiration comes from Doug Lea's ***Scalable I/O in Java***, and the theoretical support for concurrency control is also basically from Doug Lea's drafting of JSR133, JEP188 related documents. Beside that, Lighty was inspired by Netty, and there is no doubt that many of Netty's designs are optimal solutions to network 
+Its original design inspiration comes from Doug Lea's ***Scalable I/O in Java***, and the theoretical support for concurrency control is also basically from Doug Lea's drafting of JSR133, JEP188 related documents. Beside that, Lighty was inspired by Netty, and there is no doubt that many of Netty's designs are optimal solutions to network framework.
 
 Lighty is implemented based on the Multiple Reactors pattern and has the following features:
 
@@ -33,6 +33,8 @@ Lighty is implemented based on the Multiple Reactors pattern and has the followi
  <version>0.0.1</version>
 </dependency>
 ```
+
+> Ensure jdk version >= 17. if modularity is used, then the modules `lighty.core` and `lighty.codec` need to be required.
 
 We will write a Hello World service that prints the received message and reply with 'Hello World'.
 
