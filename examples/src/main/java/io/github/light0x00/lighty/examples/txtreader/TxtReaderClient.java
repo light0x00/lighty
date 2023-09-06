@@ -4,7 +4,7 @@ import io.github.light0x00.lighty.codec.StringDecoder;
 import io.github.light0x00.lighty.codec.StringEncoder;
 import io.github.light0x00.lighty.core.concurrent.FailureFutureListener;
 import io.github.light0x00.lighty.core.eventloop.NioEventLoopGroup;
-import io.github.light0x00.lighty.core.eventloop.SingleThreadExecutorGroup;
+import io.github.light0x00.lighty.core.eventloop.DefaultEventLoopGroup;
 import io.github.light0x00.lighty.core.facade.ClientBootstrap;
 import io.github.light0x00.lighty.core.facade.NioSocketChannel;
 import io.github.light0x00.lighty.core.handler.ChannelContext;
@@ -33,7 +33,7 @@ public class TxtReaderClient {
         offDebugLog();
 
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(2, new IdentifierThreadFactory("event-loop"));
-        SingleThreadExecutorGroup pipelineGroup = new SingleThreadExecutorGroup(1, new IdentifierThreadFactory("pipeline"));
+        DefaultEventLoopGroup pipelineGroup = new DefaultEventLoopGroup(1, new IdentifierThreadFactory("pipeline"));
 
         NioSocketChannel channel = new ClientBootstrap()
                 .initializer(ch ->
