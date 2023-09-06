@@ -30,7 +30,7 @@ Lighty 基于 Multiple Reactors 模式实现, 并具有如下特性:
 <dependency>
  <groupId>io.github.light0x00</groupId>
  <artifactId>lighty-all</artifactId>
- <version>0.0.1</version>
+ <version>0.0.2</version>
 </dependency>
 ```
 

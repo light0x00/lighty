@@ -6,7 +6,7 @@
 <dependency>
 	<groupId>io.github.light0x00</groupId>
 	<artifactId>lighty-all</artifactId>
-	<version>0.0.1</version>
+	<version>...</version>
 </dependency>
 ```
 

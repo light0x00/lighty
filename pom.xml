@@ -6,7 +6,7 @@
 
     <groupId>io.github.light0x00</groupId>
     <artifactId>lighty</artifactId>
-    <version>0.0.2-alpha</version>
+    <version>0.0.2</version>
     <packaging>pom</packaging>
     <modules>
         <module>lighty-core</module>
