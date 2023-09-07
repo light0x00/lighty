@@ -1,5 +1,5 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.light0x00/lighty/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.light0x00/lighty-all)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.light0x00/lighty/badge.svg)](https://central.sonatype.com/artifact/io.github.light0x00/lighty-all/)
 [![Java support](https://img.shields.io/badge/Java-17+-green?logo=java&logoColor=white)](https://openjdk.java.net/)
 
 <p align="center">
@@ -16,9 +16,9 @@ Lighty 是一个以「优雅」贯穿始终的, 异步非阻塞的, 基于事件
 
 Lighty 基于 Multiple Reactors 模式实现, 并具有如下特性:
 
-- **100% lock-less**, 基于线程栈封闭、组件间异步通信、线程绑定等手段, Lighty 中的 I/O 处理全流程无锁.
+- **100% lock-free**, 基于线程栈封闭、组件间异步通信、线程绑定等手段, Lighty 中的 I/O 处理全流程无锁.
 - **Pipeline**, 基于对象行为型模式, 带来极强的扩展性.
-- **线程池分离**, 支持 Event-Loop 与 Pipeline 使用各自独立的线程池, 且可以 1 对 1 指定 Pipeline 中每个环节的执行线程.
+- **线程池分离**, 支持「专池专用」, 可以 1 对 1 指定 Pipeline 中每个环节的执行线程.
 - **负载均衡**, Channel 会以特定的负载策略分配给 Reactors.
 - **缓冲池**, 支持缓冲区回收复用, 减少内存开销.
 - **RingBuffer**, 采用双指针, 读写更便利.
@@ -38,7 +38,7 @@ Lighty 基于 Multiple Reactors 模式实现, 并具有如下特性:
 
 我们将编写一个 Hello World 服务, 它会打印接收到的消息, 并回复 `"Hello World"`.
 
-如果以自顶向下的方式解决这个问题, 那么我们可以先实现上层处理逻辑, 在这个层面我们处理的是 `String`类型 的输入/输出. 而底层, 则是编码/解码层.
+如果以自顶向下的方式解决这个问题, 那么我们可以先实现上层处理逻辑, 在这个层面我们处理的是 `String`类型 的输入/输出.
 
 ```txt
             ┌─────────────────────┐
@@ -80,7 +80,7 @@ class HelloWorldHandler extends InboundChannelHandlerAdapter { //1.
 4. 回复 `Hello World`.
 5. 发送完成后, 关闭 channel.
 
-接下来, 我们要实现 layer 2, 幸运的是 Lighty 中内置了对文本的编码/解码器, 因此只需要将其加入 Pipeline 即可.
+接下来, 我们要实现 layer 2, 实现 String 的编码与解码, 幸运的是 Lighty 中内置了对文本的编码/解码器, 因此只需要将其加入 Pipeline 即可.
 
 ```java
 public class HelloWorldServer {
@@ -110,7 +110,7 @@ public class HelloWorldServer {
 4. 配置 Pipeline, 并指定字符串编码/解码器.
 5. 指定监听端口.
 
-至此, 我们便完成了一个能接收 UTF-8 编码的文本, 并且会回复 “Hello World” 的服务. 你可以使用 telnet 进行调试, 也可以继续了解如何使用 Lighty 编客户端的实现.(见下文) 
+至此, 我们便完成了一个能接收 UTF-8 编码的文本, 并且会回复 “Hello World” 的服务. 你可以使用 telnet 进行调试, 也可以继续了解如何使用 Lighty 编客户端.(见下文) 
 
 ## 📑后记
 
@@ -119,3 +119,5 @@ public class HelloWorldServer {
 如果你想了解关于 Lighty 的内部设计, 可以阅读 [深入理解 Lighty](https://github.com/light0x00/light0x00/blob/main/thinking-in-tech/deep-dive-into-lighty/index.md) .
 
 如果你对网络框架很感兴趣, 也可以加入 [Slack 讨论群组](https://join.slack.com/t/slack-o6y6551/shared_invite/zt-222eavevn-P75aH~I88F6Tq_g4gfQLmQ)
+
+如果你想成为 contributor, 那么非常欢迎, 目前并没有形式化的要求, 一切根据 review 实际情况. 期间有什么疑惑可以随时提 issue 或群里沟通.

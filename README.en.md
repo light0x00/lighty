@@ -1,5 +1,5 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.light0x00/lighty/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.light0x00/lighty-all)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.light0x00/lighty/badge.svg)](https://central.sonatype.com/artifact/io.github.light0x00/lighty-all/)
 [![Java support](https://img.shields.io/badge/Java-17+-green?logo=java&logoColor=white)](https://openjdk.java.net/)
 
 <p align="center">
@@ -16,7 +16,7 @@ Its original design inspiration comes from Doug Lea's ***Scalable I/O in Java***
 
 Lighty is implemented based on the Multiple Reactors pattern and has the following features:
 
-- **100% lock-less**: Lighty's I/O processing is completely lock-free throughout the entire process, thanks to techniques such as thread stack isolation, inter-components asynchronous communication, and thread binding.
+- **100% lock-free**: Lighty's I/O processing is completely lock-free throughout the entire process, thanks to techniques such as thread stack isolation, inter-components asynchronous communication, and thread binding.
 - **Pipeline**: Based on the object behavioral pattern, Lighty provides extremely strong extensibility.
 - **Thread pool separation**: Supports Event-Loop and Pipeline using their own independent thread pools, and can specify the execution thread of each phase in the Pipeline on a 1-to-1 basis.
 - **Load balancing**: Channels are assigned to Reactors using specific load balancing policies.
@@ -80,7 +80,7 @@ class HelloWorldHandler extends InboundChannelHandlerAdapter { //1.
 4. Reply "Hello World".
 5. After the sending is complete, close the channel.
 
-Next, we need to implement the layer 2, fortunately Lighty has a built-in encoder/decoder for text, so we just need to add it to the pipeline.
+Next, we need to implement the layer 2 for encoding/decoding `String`, fortunately Lighty has a built-in encoder/decoder for text, so we just need to add it to the pipeline.
 
 ```java
 public class HelloWorldServer {
@@ -119,3 +119,5 @@ If you want to learn more about Lighty use examples, you can read   [Best practi
 If you want know how it works, you can read  [Deep dive into Lighty](doc/deep-dive-into-lighty/index.en.md).
 
 If you are interested in network framework, and want to discuss about it, you can join the [Slack group](https://join.slack.com/t/slack-o6y6551/shared_invite/zt-222eavevn-P75aH~I88F6Tq_g4gfQLmQ).
+
+If you want to be a contributor, you're welcome. There's no formal requirement. it's all based on review. If you have any doubts, you can always raise an issue or communicate in the group.
